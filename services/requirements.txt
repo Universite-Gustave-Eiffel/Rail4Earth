@@ -1,4 +1,4 @@
-pyzmq==25.1.2
+pyzmq==26.0.2
 tflite-runtime-nightly>=2.14.0.dev20230627
 soundfile==0.12.1
 numba==0.59.0
