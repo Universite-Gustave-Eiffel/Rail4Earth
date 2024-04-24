@@ -56,7 +56,16 @@ def lte_config(args):
                     print("Not ready..")
                     time.sleep(1)
                 print("Should return READY")
-                print(send_command(ser, "AT+CPIN?"))
+                resp = send_command(ser, "AT+CPIN?")
+                if "SIM PIN" in resp: #require pin code
+                    resp = send_command(ser, "AT+CPIN=\"0000\"")
+                    if not "READY" in send_command(ser, "AT+CPIN?"):
+                        # we should not try to send a new pin code as it could lock the sim card
+                        while True:
+                            print("Sim code rejected by the sim card, "
+                                  "this service is in standby mode")
+                            print(send_command(ser, "AT+CPIN?"))
+                            time.sleep(5)
                 print("Should return 3 or 4")
                 resp = send_command(ser, "AT#USBCFG?")
                 print(resp)
