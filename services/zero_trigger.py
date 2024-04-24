@@ -550,7 +550,7 @@ if __name__ == "__main__":
     parser.add_argument("--add_spectrogram",
                         help="Add spectrogram float16 array in base 64 in"
                              " json file", default=False, action="store_true")
-    parser.add_argument("-v", "--verbose",
+    parser.add_argument("--verbose",
                         help="Print all messages", default=False, action="store_true")
     args = parser.parse_args()
     if not args.configuration_file:
