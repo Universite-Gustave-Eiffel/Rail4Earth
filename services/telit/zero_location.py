@@ -84,6 +84,7 @@ def lte_config(args):
                      'IPV4V6' if args.ipv6 else "IP", args.apn)))
                     print(send_command(ser, "AT#REBOOT"))
                     time.sleep(35)
+                    continue
                 print("Should return 0,1")
                 resp = send_command(ser, "AT#ECM?")
                 print(resp)
