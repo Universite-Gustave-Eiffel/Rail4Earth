@@ -27,6 +27,10 @@
       rsync_opts:
         - "--remove-source-files"
         - "--exclude='*.tmp'"
+  - name: Creates temp directory
+    ansible.builtin.file:
+      path: '{{ source2 }}'
+      state: directory        
   - name: data synchronization
     ansible.posix.synchronize:
       mode: 'pull'
@@ -35,4 +39,3 @@
       rsync_opts:
         - "--remove-source-files"
         - "--exclude='*.tmp'"
-        - "--ignore-missing-args"
