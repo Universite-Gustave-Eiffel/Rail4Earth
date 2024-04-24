@@ -21,5 +21,6 @@
   "yamnet_window_time": 5.0,
   "sensitivity": -28.34,
   "delay_print_samples": 300,
-  "add_spectrogram": false
+  "add_spectrogram": false,
+  "verbose": false
 }

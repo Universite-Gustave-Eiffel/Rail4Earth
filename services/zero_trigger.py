@@ -550,7 +550,7 @@ if __name__ == "__main__":
     parser.add_argument("--add_spectrogram",
                         help="Add spectrogram float16 array in base 64 in"
                              " json file", default=False, action="store_true")
-    parser.add_argument("--verbose",
+    parser.add_argument("-v", "--verbose",
                         help="Print all messages", default=False, action="store_true")
     args = parser.parse_args()
     if not args.configuration_file:
@@ -563,7 +563,7 @@ if __name__ == "__main__":
         with open(args.configuration_file, "r") as fp:
             print("Load configuration file " + args.configuration_file)
             cfg = json.load(fp)
-            args = types.SimpleNamespace(**cfg)
+            args = types.SimpleNamespace(**(vars(args) | cfg))
     print("Configuration:\n" + json.dumps(vars(args),
                                           sort_keys=False, indent=2))
     trigger = TriggerProcessor(args)
