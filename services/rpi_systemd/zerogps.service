@@ -4,7 +4,7 @@ Requires=gpsd.service
 
 [Service]
 Type=simple
-ExecStart= /usr/bin/python3.9 -u /home/pi/noisesensor/services/telit/zero_location.py --push_interval 1800 -v --check_ip 194.187.168.100
+ExecStart= /usr/bin/python3.9 -u /home/pi/noisesensor/services/telit/zero_location.py --push_interval 1800 -v --check_ip 194.187.168.100 --device /dev/serial/by-id/usb-Android_LE910C4-EU_0123456789ABCDEF-if05-port0
 WorkingDirectory=/home/pi/noisesensor/
 Restart=always
 RestartSec=5s
