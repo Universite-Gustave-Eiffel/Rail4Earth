@@ -8,6 +8,9 @@ import zmq
 import subprocess  # For executing a shell command
 import datetime
 
+TTYUSB_PATH = "/dev/serial/by-id/usb-Android_LE910C4-EU_0123456789ABCDEF-if05-port0"
+PIN_CODE = "0000"
+
 def ping(host):
     """
     Returns True if host (str) responds to a ping request.
@@ -50,7 +53,7 @@ def lte_config(args):
     #
     while True:
         try:
-            with serial.Serial('/dev/ttyUSB2', 115200, timeout=5) as ser:
+            with serial.Serial(TTYUSB_PATH, 115200, timeout=5) as ser:
                 print("Waiting for response")
                 while "OK" not in send_command(ser, "AT"):
                     print("Not ready..")
@@ -58,7 +61,7 @@ def lte_config(args):
                 print("Should return READY")
                 resp = send_command(ser, "AT+CPIN?")
                 if "SIM PIN" in resp: #require pin code
-                    resp = send_command(ser, "AT+CPIN=\"0000\"")
+                    resp = send_command(ser, "AT+CPIN=\"%s\"" % PIN_CODE)
                     if not "READY" in send_command(ser, "AT+CPIN?"):
                         # we should not try to send a new pin code as it could lock the sim card
                         while True:
@@ -117,7 +120,7 @@ def wait(wait_time):
 def gps_config(args):
     while True:
         try:
-            with serial.Serial('/dev/ttyUSB2', 115200, timeout=5) as ser:
+            with serial.Serial(TTYUSB_PATH, 115200, timeout=5) as ser:
                 print("Waiting for response")
                 while "OK" not in send_command(ser, "AT"):
                     print("Not ready..")
@@ -220,7 +223,7 @@ def main():
                                                         "lon": document["TPV"]["lon"],
                                                         "z": document["TPV"]["alt"]}
                             try:
-                                with serial.Serial('/dev/ttyUSB2', 115200,
+                                with serial.Serial(TTYUSB_PATH, 115200,
                                                    timeout=5) as ser:
                                     resp = send_command(ser, "AT#TEMPMON=1")
                                     if "TEMPMEAS" in resp and "," in resp:
