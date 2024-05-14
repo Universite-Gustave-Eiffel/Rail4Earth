@@ -51,7 +51,7 @@ async def main(config):
         logger.info("Discover BLE devices..")
         devices = await BleakScanner.discover()
         for d in devices:
-            if "Pixl.js" in d.name:
+            if d.name and "Pixl.js" in d.name:
                 address = d.address
                 logger.info("Found Pixl.js " + repr(d))
                 break
