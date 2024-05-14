@@ -18,3 +18,34 @@ Then open localhost:8080 in browser
 
 Without having to rebuild the image or restarting the container, all changes made in files will be automatically applied
 
+# Nginx websocket
+
+Configuration example:
+
+```nginx
+upstream websocket {
+  server 127.0.0.1:8080;
+}
+
+server {
+    client_max_body_size 0;
+    server_name mydomain.org;
+
+    location / {
+        proxy_set_header X-Forwarded-Host $host:$server_port;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 3600;
+        proxy_pass http://127.0.0.1:8080;
+    }
+
+    location /ws {
+        proxy_pass http://websocket;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+    }
+
+}
+```
