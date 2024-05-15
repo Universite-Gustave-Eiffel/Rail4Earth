@@ -87,7 +87,7 @@ async def main(config):
                         # Timeout, disconnect
                         break
                     else:
-                        c = process_message(socket)
+                        c = process_message(socket, config)
                         if len(c) == 0 and time.time() - last_push > config.disconnect_ble_timeout:
                             # Timeout, disconnect
                             print("Disconnect bluetooth..")
