@@ -35,17 +35,18 @@ function disableButtons() {
 function update_advertisement() {
   NRF.setAdvertising({
   0x183B : mode == 1 ? 'install' : 'normal'
-});
+}, {whenConnected : true, interval: 1000});
 }
 
-function switchStateInstall() {
-  mode = !mode;
+function switchStateInstall(newMode) {
+  mode = newMode;
   update_advertisement();
   installScreen();
+  if(mode){
+    timeout_switch = setTimeout(switchStateInstall, 15*60000, false);
+  }
 }
-function leadZero(value) {
-  return ("0"+value.toString()).substr(-2);
-}
+
 function rssiPowerHint() {
   if(rssi>-55)
     return "Très bon";
@@ -91,7 +92,7 @@ function installScreen() {
 function onPressButton1(){
   let state = digitalRead(BTN1);
   if(state){
-    timeout_switch = setTimeout(switchStateInstall, MODE_SWITCH_MILLI);
+    timeout_switch = setTimeout(switchStateInstall, MODE_SWITCH_MILLI, !mode);
   } else {
     clearTimeout(timeout_switch);
   }

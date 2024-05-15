@@ -54,7 +54,7 @@ async def main():
                          b");rssi=%f;\n") % ( now, now, -time.altzone // 3600, scan_result.advertising_data.rssi)
                     await sendCommand(client, c)
             except (BleakError,asyncio.TimeoutError) as e:
-                logger.error(repr(e), e)
+                logger.error("Abort communication with pixl.js", e)
 
 
 logging.basicConfig(level=logging.INFO)
