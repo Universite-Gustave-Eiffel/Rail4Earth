@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 def uart_data_received(sender, data):
     decoded = data.decode('UTF-8')
-    print(decoded)
+    logger.info(decoded)
 
 
 class ScanResult:
@@ -81,7 +81,7 @@ async def main(config):
                         break
                     else:
                         await asyncio.sleep(0.5)
-
+                # E.pipe(\"mode=\"+mode, Bluetooth);
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='This program read trigger tags from zeromq and display summary on '
