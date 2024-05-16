@@ -1,11 +1,12 @@
-
 // force timezone to UTC+0200
 E.setTimeZone(2);
 Pixl.setLCDPower(false);
 var mode=0;
+var question_step=-1;
 var rssi=-100;
 let lastSeen = Date(0);
 const MODE_SWITCH_MILLI = 4000;
+const TIMEOUT_RPI = 15000;
 var button_watch = [0,0,0,0];
 var timeout_switch = 0;
 Bluetooth.setConsole(1);
@@ -43,7 +44,7 @@ function switchStateInstall(newMode) {
   update_advertisement();
   installScreen();
   if(mode){
-    timeout_switch = setTimeout(switchStateInstall, 15*60000, false);
+    setTimeout(switchStateInstall, 15*60000, false);
   }
 }
 
@@ -66,17 +67,17 @@ function installScreen() {
     text_metrics = g.stringMetrics(text);
     g.drawString(text, g.getWidth() / 2 - text_metrics.width / 2, 0);
     y+=text_metrics.height;
-    if(lastSeen.valueOf() < 1){
+    let diff=Date().valueOf()-lastSeen.valueOf();
+    if(diff > TIMEOUT_RPI){
       text = "No Rpi Connection";
     }else{
-      let diff=Date().valueOf()-lastSeen.valueOf();
       text="Vu il y a "+parseInt(diff/1000)+" secondes";
     }
     text_metrics = g.stringMetrics(text);
     y=g.getHeight() / 2 - text_metrics.height / 2;
     g.drawString(text, g.getWidth() / 2 - text_metrics.width / 2, y);
     y+=text_metrics.height;
-    if(lastSeen.valueOf() > 1){
+    if(diff < TIMEOUT_RPI){
         text="RSSI: "+rssi+" dB ("+rssiPowerHint()+")";
         text_metrics = g.stringMetrics(text);
         g.drawString(text, g.getWidth() / 2 - text_metrics.width / 2, y);
@@ -96,6 +97,10 @@ function onPressButton1(){
   } else {
     clearTimeout(timeout_switch);
   }
+}
+
+function onTrainCrossing(fromTimer) {
+
 }
 
 update_advertisement();

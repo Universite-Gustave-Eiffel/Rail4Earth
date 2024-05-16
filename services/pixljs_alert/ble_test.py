@@ -34,7 +34,7 @@ async def sendCommand(client, c):
     while len(c) > 0:
         await client.write_gatt_char(UUID_NORDIC_TX, bytearray(c[0:20]), True)
         c = c[20:]
-    await asyncio.sleep(0.125)  # wait for a response≈
+    await asyncio.sleep(0.125)  # wait for a response
 
 
 async def main():
