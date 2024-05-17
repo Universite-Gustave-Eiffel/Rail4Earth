@@ -3,6 +3,17 @@ E.setTimeZone(2);
 const BUZZING_TIME = 2 * 60 * 1000; // buzzer time ms
 const SNOOZE_TOTAL_TIME_MS = 24 * 3600 * 1000;
 const RESET_NO_ANSWER = 5 * 60 * 1000;
+const QUESTIONS = [
+  ["Juste avant la notification,\n où étiez-vous ?",
+    ["Pièce principale", "Autre pièce", "Exterieur"]
+  ],
+  ["Juste avant la notification, qu'étiez-vous en train de faire ?",
+    ["Lire ou se concentrer", "Loisir", "Se reposer ou dormir", "Discuter", "Téléphone", "Tâches ménagères", "Autre"]
+  ],
+  ["Avant le passage de train, vous diriez que l'ambiance sonore à l'intérieur de votre logement était",
+    ["Très calme", "Plutôt calme", "Ni calme ni bruyante", "Plutôt bruyante", "Très bruyante"]
+  ]
+];
 var PIN_BUZZER = A0; // Yellow cable pin Buzzer is connected to
 Pixl.setLCDPower(false);
 var mode = 0; // 0 wait 1 install 2 answering question
@@ -20,6 +31,8 @@ var snooze_time = 0;
 var trainCrossingTime = 0;
 var sliderValue = -1;
 var currentForm = [];
+var question_index = 0;
+var answer_index = 0;
 Bluetooth.setConsole(1);
 var zzImage = {
   width: 20,
@@ -95,7 +108,6 @@ function rssiPowerHint() {
 
 // Function to draw the slider
 function questionBDrawScreen() {
-  Pixl.setLCDPower(true);
   let sliderWidth = 100;
   let sliderHeight = 10;
   let knobHeight = 15;
@@ -247,7 +259,7 @@ function screenQuestionB() {
   }, BTN2);
   button_watch[2] = setWatch(e => {
     recordAnswer('B', sliderValue);
-    screenQuestionCE();
+    onQuestionCE(0);
   }, BTN3, {
     repeat: false,
     edge: 'rising'
@@ -255,11 +267,30 @@ function screenQuestionB() {
 
 }
 
-function screenQuestionCE() {
-  disableButtons();
-  stopAlarm();
+function questionCEDrawScreen() {
   g.clear();
+  g.setFontAlign(1, -1);
+  text = "Suivant>";
+  g.drawString(text, g.getWidth(), 0);
+  text_metrics = g.stringMetrics(text);
+  g.setFontAlign(-1, -1);
+  g.drawString(QUESTIONS[questionIndex][0], 0, text_metrics.height);
+  y=text_metrics.height;
+  text_metrics = g.stringMetrics(QUESTIONS[questionIndex][0]);
+  y+=text_metrics.height+1;
+  g.setFontAlign(0.5, 1);
+  g.drawString(QUESTIONS[questionIndex][1][answer_index], g.getWidth()/2, g.getHeight());
+  g.setFontAlign(-1, 1);
+  g.drawString("<", 0, g.getHeight());
+  g.setFontAlign(1, 1);
+  g.drawString(">", g.getWidth(), g.getHeight());
   g.flip();
+}
+
+function onQuestionCE(index) {
+  questionIndex = index;
+  disableButtons();
+  questionCEDrawScreen();
 }
 
 function onClickSnooze() {
@@ -282,7 +313,7 @@ function screenQuestionA() {
   if (timeout_reset > 0) {
     clearTimeout(timeout_reset);
   }
-  timeout_reset = setTimeout(switchStateInstall, RESET_NO_ANSWER, 0);
+  timeout_reset = setTimeout(a => {timeout_reset=0;switchStateInstall(0);}, RESET_NO_ANSWER);
   Pixl.setLCDPower(true);
   LED.write(1);
   g.clear();
@@ -304,7 +335,7 @@ function screenQuestionA() {
   });
   button_watch[2] = setWatch(function() {
     recordAnswer('A', 'non');
-    screenQuestionCE();
+    onQuestionCE(0);
   }, BTN3, {
     repeat: false,
     edge: 'rising',
