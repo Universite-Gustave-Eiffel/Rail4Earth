@@ -19,18 +19,13 @@ var timeout_stop_alarm = 0;
 var snooze_time = 0;
 var trainCrossingTime = 0;
 var sliderValue = -1;
+var currentForm = [];
 Bluetooth.setConsole(1);
 var zzImage = {
   width: 20,
   height: 20,
   bpp: 1,
   buffer: atob("AAHwAB8GAGDADBwB88AffHwHh8B8GA/DAPx8D+fA/gAH8AB/wMf//D//gf/wD/4AP8A=")
-};
-var checkImage = {
-  width: 20,
-  height: 20,
-  bpp: 1,
-  buffer: atob("AAAAAAAAAAAAAAABAAA4AAfAAPgQHwOD4Hx8A++AH/AA/gAHwAA4AAEAAAAAAAAAAAA=")
 };
 const tone_times = atob("ZHJkcmRyZHJkcmRyZHJkcmQqZCpkKmRyZHJkKmQqZCpkcmRyZHJkcmRyZHJkKmQqZCpkcmRyZCpkKmQqZHJkcmQqZCpkKmRyZHJkcmRyZHJkcmRyZHJkcmRyZCpkKmQqZHJkcmQqZCpkKmRyZHJkcmRyZHJkcmQqZCpkKmRyZHJkKmQqZCpkcmRyZCpkKmQqZHJkcg==");
 var current_note = 0;
@@ -99,7 +94,7 @@ function rssiPowerHint() {
 }
 
 // Function to draw the slider
-function question2DrawScreen() {
+function questionBDrawScreen() {
   Pixl.setLCDPower(true);
   let sliderWidth = 100;
   let sliderHeight = 10;
@@ -108,7 +103,6 @@ function question2DrawScreen() {
   // Clear the display
   g.clear();
   // Draw the slider track
-  g.drawImage(checkImage, g.getWidth()-checkImage.width, g.getHeight()-checkImage.height);
   var sliderXPosition = (g.getWidth() - sliderWidth) / 2;
   g.drawRect(sliderXPosition, sliderYPosition, sliderXPosition + sliderWidth,
     sliderYPosition + sliderHeight);
@@ -138,6 +132,8 @@ function question2DrawScreen() {
   g.setFontAlign(0.0, -1);
   x = g.getWidth() / 2; // Calculate the center x-coordinate
   g.drawString("Gêne au passage", x, 0);
+  g.setFontAlign(1, 1);
+  g.drawString("Suivant > ", g.getWidth(), g.getHeight());
   // Update the display
   g.flip();
 }
@@ -199,7 +195,7 @@ function onTrainCrossing(demo) {
   if (snooze_time < Date() && mode == 0) {
     trainCrossingTime = Date();
     buzzerDelay();
-    screen_question1();
+    screenQuestionB();
   }
 }
 
@@ -228,15 +224,15 @@ function buzzerDelay() {
   timeout_stop_alarm = setTimeout(stopAlarm, BUZZING_TIME);
 }
 
-function screenQuestion2() {
+function screenQuestionB() {
   sliderValue = -1;
   disableButtons();
   stopAlarm();
-  question2DrawScreen();
+  questionBDrawScreen();
   button_watch[0] = setWatch(e => {
     if (sliderValue == -1) sliderValue = 0;
     sliderValue = Math.max(0, sliderValue - 1);
-    question2DrawScreen();
+    questionBDrawScreen();
   }, BTN1, {
     repeat: true,
     edge: 'rising'
@@ -244,19 +240,22 @@ function screenQuestion2() {
   button_watch[1] = setWatch(e => {
     if (sliderValue == -1) sliderValue = 10;
     sliderValue = Math.min(10, sliderValue + 1);
-    question2DrawScreen();
+    questionBDrawScreen();
   }, BTN2, {
     repeat: true,
     edge: 'rising'
   }, BTN2);
-  button_watch[2] = setWatch(e => { recordAnswer(2, [sliderValue]);screenQuestion3_5(); }, BTN3, {
+  button_watch[2] = setWatch(e => {
+    recordAnswer('B', sliderValue);
+    screenQuestionCE();
+  }, BTN3, {
     repeat: false,
     edge: 'rising'
   }, BTN2);
 
 }
 
-function screenQuestion3_5() {
+function screenQuestionCE() {
   disableButtons();
   stopAlarm();
   g.clear();
@@ -271,12 +270,16 @@ function onClickSnooze() {
   watchIdleButtons();
   mode = 0;
 }
+
 function recordAnswer(questionIndex, answers) {
-  print([questionIndex, answers]);
+  currentForm.push([questionIndex, answers]);
+  print(JSON.stringify(Object.fromEntries(currentForm)));
 }
-function screen_question1() {
+
+function screenQuestionA() {
   mode = 2;
-  if(timeout_reset>0) {
+  currentForm = [];
+  if (timeout_reset > 0) {
     clearTimeout(timeout_reset);
   }
   timeout_reset = setTimeout(switchStateInstall, RESET_NO_ANSWER, 0);
@@ -299,12 +302,18 @@ function screen_question1() {
     edge: 'rising',
     debounce: 10
   });
-  button_watch[2] = setWatch(function(){ recordAnswer(1, ['non']);screenQuestion3_5();}, BTN3, {
+  button_watch[2] = setWatch(function() {
+    recordAnswer('A', 'non');
+    screenQuestionCE();
+  }, BTN3, {
     repeat: false,
     edge: 'rising',
     debounce: 10
   });
-  button_watch[3] = setWatch(function(){ recordAnswer(1, ['oui']);screenQuestion2();}, BTN4, {
+  button_watch[3] = setWatch(function() {
+    recordAnswer('A', 'oui');
+    screenQuestionB();
+  }, BTN4, {
     repeat: true,
     edge: 'both',
     debounce: 10
@@ -312,4 +321,4 @@ function screen_question1() {
 }
 updateAdvertisement();
 watchIdleButtons();
-screen_question1();
+screenQuestionA();
