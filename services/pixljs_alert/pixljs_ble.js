@@ -279,11 +279,11 @@ function questionCEDrawScreen() {
   text_metrics = g.stringMetrics(text);
   g.setFontAlign(-1, -1);
   g.drawString(QUESTIONS[questionIndex][0], 0, text_metrics.height);
-  y=text_metrics.height;
+  y = text_metrics.height;
   text_metrics = g.stringMetrics(QUESTIONS[questionIndex][0]);
-  y+=text_metrics.height+1;
+  y += text_metrics.height + 1;
   g.setFontAlign(0.5, 1);
-  g.drawString(QUESTIONS[questionIndex][1][answer_index], g.getWidth()/2, g.getHeight());
+  g.drawString(QUESTIONS[questionIndex][1][answer_index], g.getWidth() / 2, g.getHeight());
   g.setFontAlign(-1, 1);
   g.drawString("<", 0, g.getHeight());
   g.setFontAlign(1, 1);
@@ -310,10 +310,10 @@ function onQuestionCE(index) {
     edge: 'rising'
   });
   button_watch[1] = setWatch(e => {
-    recordAnswer(String.fromCharCode(67+questionIndex), QUESTIONS[questionIndex][1][answer_index]);
+    recordAnswer(String.fromCharCode(67 + questionIndex), QUESTIONS[questionIndex][1][answer_index]);
     answer_index = 0;
-    if(questionIndex+1 < QUESTIONS.length)
-      onQuestionCE(questionIndex+1);
+    if (questionIndex + 1 < QUESTIONS.length)
+      onQuestionCE(questionIndex + 1);
     else
       endForm();
   }, BTN2, {
@@ -321,15 +321,27 @@ function onQuestionCE(index) {
     edge: 'rising'
   });
 }
+
 function endForm() {
-  formStack.push(JSON.stringify(Object.fromEntries([["trainCrossingTime", trainCrossingTime],["answers",Object.fromEntries(currentForm)]])));
+  formStack.push(JSON.stringify(Object.fromEntries([
+    ["trainCrossingTime", trainCrossingTime],
+    ["answers", Object.fromEntries(currentForm)]
+  ])));
+  disableButtons();
   currentForm = [];
-  Pixl.setLCDPower(false);
-  LED.write(0);
-  watchIdleButtons();
+  g.clear();
+  g.setFontAlign(0.5, 0.5);
+  g.drawString("Merci pour votre réponse\nAu prochain passage !", g.getWidth() / 2, g.getHeight() / 2);
+  g.flip();
+  setTimeout(e => {
+    Pixl.setLCDPower(false);
+    LED.write(0);
+    watchIdleButtons();
+  }, 5000);
   mode = 0;
   updateAdvertisement();
 }
+
 function onClickSnooze() {
   snooze_time = Date() + SNOOZE_TOTAL_TIME_MS;
   stopAlarm();
@@ -350,7 +362,10 @@ function screenQuestionA() {
   if (timeout_reset > 0) {
     clearTimeout(timeout_reset);
   }
-  timeout_reset = setTimeout(a => {timeout_reset=0;switchStateInstall(0);}, RESET_NO_ANSWER);
+  timeout_reset = setTimeout(a => {
+    timeout_reset = 0;
+    switchStateInstall(0);
+  }, RESET_NO_ANSWER);
   Pixl.setLCDPower(true);
   LED.write(1);
   g.clear();
@@ -391,4 +406,3 @@ function screenQuestionA() {
 }
 updateAdvertisement();
 watchIdleButtons();
-screenQuestionA();
