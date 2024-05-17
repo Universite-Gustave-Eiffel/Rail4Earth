@@ -1,10 +1,11 @@
 // force timezone to UTC+0200
 E.setTimeZone(2);
-var BUZZING_TIME = 300000; // buzzer time ms
-var SNOOZE_TOTAL_TIME_MS = 24 * 3600 * 1000;
+const BUZZING_TIME = 2 * 60 * 1000; // buzzer time ms
+const SNOOZE_TOTAL_TIME_MS = 24 * 3600 * 1000;
+const RESET_NO_ANSWER = 5 * 60 * 1000;
 var PIN_BUZZER = A0; // Yellow cable pin Buzzer is connected to
 Pixl.setLCDPower(false);
-var mode = 0;
+var mode = 0; // 0 wait 1 install 2 answering question
 var rssi = -100;
 let lastSeen = Date(0);
 const MODE_SWITCH_MILLI = 4000;
@@ -12,6 +13,7 @@ const TIMEOUT_RPI = 15000;
 var button_watch = [0, 0, 0, 0];
 var timeout_switch = 0;
 var timeout_buzzer = 0;
+var timeout_reset = 0;
 var state_buzzer = 0;
 var timeout_stop_alarm = 0;
 var snooze_time = 0;
@@ -62,7 +64,7 @@ function watchIdleButtons() {
     edge: 'both',
     debounce: 10
   });
-  button_watch[3] = setWatch(onPressButtonTrainDemo, BTN4, {
+  button_watch[1] = setWatch(onPressButtonTrainDemo, BTN2, {
     repeat: true,
     edge: 'both',
     debounce: 10
@@ -97,7 +99,7 @@ function rssiPowerHint() {
 }
 
 // Function to draw the slider
-function drawSlider() {
+function question2DrawScreen() {
   Pixl.setLCDPower(true);
   let sliderWidth = 100;
   let sliderHeight = 10;
@@ -106,6 +108,7 @@ function drawSlider() {
   // Clear the display
   g.clear();
   // Draw the slider track
+  g.drawImage(checkImage, g.getWidth()-checkImage.width, g.getHeight()-checkImage.height);
   var sliderXPosition = (g.getWidth() - sliderWidth) / 2;
   g.drawRect(sliderXPosition, sliderYPosition, sliderXPosition + sliderWidth,
     sliderYPosition + sliderHeight);
@@ -113,7 +116,7 @@ function drawSlider() {
   var knobY = sliderYPosition;
   // Draw the slider knob as a triple vertical line
   var knobYPosition = knobY - (knobHeight - sliderHeight) / 2;
-  if(sliderValue >= 0) {
+  if (sliderValue >= 0) {
     // Calculate the position of the slider knob
     var knobX = Math.round(sliderValue / 10 * sliderWidth) + sliderXPosition;
     g.fillRect(knobX - 2, knobYPosition, knobX + 2, knobYPosition + knobHeight);
@@ -125,7 +128,7 @@ function drawSlider() {
   g.setFontAlign(0.5, 0.5);
   var x = g.getWidth() / 2; // Calculate the center x-coordinate
   var y = 13 + 15 / 2; // Calculate the center y-coordinate
-  g.drawString(sliderValue==-1?"?":sliderValue, x, y);
+  g.drawString(sliderValue == -1 ? "?" : sliderValue, x, y);
   g.setFontAlign(0.5, 1);
   if (sliderValue == 0) {
     g.drawString("Pas du tout", g.getWidth() / 2, knobYPosition);
@@ -135,14 +138,12 @@ function drawSlider() {
   g.setFontAlign(0.0, -1);
   x = g.getWidth() / 2; // Calculate the center x-coordinate
   g.drawString("Gêne au passage", x, 0);
-  g.setFontAlign(1, 0.0);
-  g.drawString("Suivant > ", g.getWidth(), 60);
   // Update the display
   g.flip();
 }
 
 function installScreen() {
-  if (mode) {
+  if (mode == 1) {
     var y = 0;
     Pixl.setLCDPower(true);
     LED.write(1);
@@ -184,7 +185,8 @@ function onPressButtonInstallMode() {
 }
 
 function onPressButtonTrainDemo() {
-  let state = digitalRead(BTN4);
+  print("press demo button");
+  let state = digitalRead(BTN2);
   if (state) {
     timeout_switch = setTimeout(onTrainCrossing, MODE_SWITCH_MILLI, false);
   } else {
@@ -192,11 +194,12 @@ function onPressButtonTrainDemo() {
   }
 }
 
-function onTrainCrossing(fromTimer) {
-  if (snooze_time > Date()) {
+function onTrainCrossing(demo) {
+  print("train crossing");
+  if (snooze_time < Date() && mode == 0) {
     trainCrossingTime = Date();
     buzzerDelay();
-    screen_question0();
+    screen_question1();
   }
 }
 
@@ -225,31 +228,35 @@ function buzzerDelay() {
   timeout_stop_alarm = setTimeout(stopAlarm, BUZZING_TIME);
 }
 
-function screen_question1() {
+function screenQuestion2() {
   sliderValue = -1;
   disableButtons();
   stopAlarm();
-  drawSlider();
+  question2DrawScreen();
   button_watch[0] = setWatch(e => {
-    if(sliderValue==-1) sliderValue=0;
+    if (sliderValue == -1) sliderValue = 0;
     sliderValue = Math.max(0, sliderValue - 1);
-    drawSlider();
+    question2DrawScreen();
   }, BTN1, {
     repeat: true,
     edge: 'rising'
   }, BTN1);
   button_watch[1] = setWatch(e => {
-    if(sliderValue==-1) sliderValue=10;
+    if (sliderValue == -1) sliderValue = 10;
     sliderValue = Math.min(10, sliderValue + 1);
-    drawSlider();
+    question2DrawScreen();
   }, BTN2, {
     repeat: true,
+    edge: 'rising'
+  }, BTN2);
+  button_watch[2] = setWatch(e => { recordAnswer(2, [sliderValue]);screenQuestion3_5(); }, BTN3, {
+    repeat: false,
     edge: 'rising'
   }, BTN2);
 
 }
 
-function screen_question2() {
+function screenQuestion3_5() {
   disableButtons();
   stopAlarm();
   g.clear();
@@ -261,11 +268,20 @@ function onClickSnooze() {
   stopAlarm();
   Pixl.setLCDPower(false);
   LED.write(0);
+  watchIdleButtons();
+  mode = 0;
 }
-
-function screen_question0() {
+function recordAnswer(questionIndex, answers) {
+  print([questionIndex, answers]);
+}
+function screen_question1() {
+  mode = 2;
+  if(timeout_reset>0) {
+    clearTimeout(timeout_reset);
+  }
+  timeout_reset = setTimeout(switchStateInstall, RESET_NO_ANSWER, 0);
   Pixl.setLCDPower(true);
-  LED.write(0);
+  LED.write(1);
   g.clear();
   g.drawImage(zzImage, 0, 0);
   text = "Avez-vous entendu un \ntrain juste avant la \nnotification ?";
@@ -283,12 +299,12 @@ function screen_question0() {
     edge: 'rising',
     debounce: 10
   });
-  button_watch[2] = setWatch(screen_question2, BTN3, {
+  button_watch[2] = setWatch(function(){ recordAnswer(1, ['non']);screenQuestion3_5();}, BTN3, {
     repeat: false,
     edge: 'rising',
     debounce: 10
   });
-  button_watch[3] = setWatch(screen_question1, BTN4, {
+  button_watch[3] = setWatch(function(){ recordAnswer(1, ['oui']);screenQuestion2();}, BTN4, {
     repeat: true,
     edge: 'both',
     debounce: 10
@@ -296,4 +312,4 @@ function screen_question0() {
 }
 updateAdvertisement();
 watchIdleButtons();
-screen_question0();
+screen_question1();
