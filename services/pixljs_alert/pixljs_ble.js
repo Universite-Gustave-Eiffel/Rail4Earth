@@ -85,7 +85,8 @@ function watchIdleButtons() {
 
 function updateAdvertisement() {
   NRF.setAdvertising({
-    0x183B: mode == 1 ? 'install' : 'normal'
+    0x183B: mode == 1 ? 'install' : 'normal',
+    0x180A: formStack.length
   }, {
     whenConnected: true
   }); //, interval: 1000
@@ -211,7 +212,7 @@ function onTrainCrossing(demo) {
   if (snooze_time < Date() && mode == 0) {
     trainCrossingTime = Date();
     buzzerDelay();
-    screenQuestionB();
+    screenQuestionA();
   }
 }
 
@@ -243,7 +244,6 @@ function buzzerDelay() {
 function screenQuestionB() {
   sliderValue = -1;
   disableButtons();
-  stopAlarm();
   questionBDrawScreen();
   button_watch[0] = setWatch(e => {
     if (sliderValue == -1) sliderValue = 0;
@@ -322,12 +322,13 @@ function onQuestionCE(index) {
   });
 }
 function endForm() {
-  formStack.push(JSON.stringify(Object.fromEntries([["train_time", train_time],["answers",Object.fromEntries(currentForm)]])));
+  formStack.push(JSON.stringify(Object.fromEntries([["trainCrossingTime", trainCrossingTime],["answers",Object.fromEntries(currentForm)]])));
   currentForm = [];
   Pixl.setLCDPower(false);
   LED.write(0);
   watchIdleButtons();
   mode = 0;
+  updateAdvertisement();
 }
 function onClickSnooze() {
   snooze_time = Date() + SNOOZE_TOTAL_TIME_MS;
@@ -370,6 +371,7 @@ function screenQuestionA() {
     debounce: 10
   });
   button_watch[2] = setWatch(function() {
+    stopAlarm();
     recordAnswer('A', 'non');
     onQuestionCE(0);
   }, BTN3, {
@@ -378,6 +380,7 @@ function screenQuestionA() {
     debounce: 10
   });
   button_watch[3] = setWatch(function() {
+    stopAlarm();
     recordAnswer('A', 'oui');
     screenQuestionB();
   }, BTN4, {
