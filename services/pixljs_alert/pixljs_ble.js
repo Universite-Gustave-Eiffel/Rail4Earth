@@ -7,11 +7,14 @@ const QUESTIONS = [
   ["Juste avant la notification,\n où étiez-vous ?",
     ["Pièce principale", "Autre pièce", "Exterieur"]
   ],
-  ["Juste avant la notification, qu'étiez-vous en train de faire ?",
+  ["Juste avant la notification,\nqu'étiez-vous en train de\nfaire ?",
     ["Lire ou se concentrer", "Loisir", "Se reposer ou dormir", "Discuter", "Téléphone", "Tâches ménagères", "Autre"]
   ],
-  ["Avant le passage de train, vous diriez que l'ambiance sonore à l'intérieur de votre logement était",
+  ["Avant le passage de train,\nvous diriez que l'ambiance\nsonore à l'intérieur de\nvotre logement était",
     ["Très calme", "Plutôt calme", "Ni calme ni bruyante", "Plutôt bruyante", "Très bruyante"]
+  ],
+  ["La/les fenêtre(s)/baie(s)\nvitrée(s) de la pièce où\nvous vous trouviez\nétait/étaient",
+    ["Toute fermées", "Certaines ouvertes"]
   ]
 ];
 var PIN_BUZZER = A0; // Yellow cable pin Buzzer is connected to
@@ -31,6 +34,7 @@ var snooze_time = 0;
 var trainCrossingTime = 0;
 var sliderValue = -1;
 var currentForm = [];
+var formStack = [];
 var question_index = 0;
 var answer_index = 0;
 Bluetooth.setConsole(1);
@@ -291,8 +295,40 @@ function onQuestionCE(index) {
   questionIndex = index;
   disableButtons();
   questionCEDrawScreen();
+  button_watch[3] = setWatch(e => {
+    answer_index = Math.max(0, answer_index - 1);
+    questionCEDrawScreen();
+  }, BTN4, {
+    repeat: true,
+    edge: 'rising'
+  });
+  button_watch[2] = setWatch(e => {
+    answer_index = Math.min(QUESTIONS[questionIndex][1].length - 1, answer_index + 1);
+    questionCEDrawScreen();
+  }, BTN3, {
+    repeat: true,
+    edge: 'rising'
+  });
+  button_watch[1] = setWatch(e => {
+    recordAnswer(String.fromCharCode(67+questionIndex), QUESTIONS[questionIndex][1][answer_index]);
+    answer_index = 0;
+    if(questionIndex+1 < QUESTIONS.length)
+      onQuestionCE(questionIndex+1);
+    else
+      endForm();
+  }, BTN2, {
+    repeat: false,
+    edge: 'rising'
+  });
 }
-
+function endForm() {
+  formStack.push(JSON.stringify(Object.fromEntries([["train_time", train_time],["answers",Object.fromEntries(currentForm)]])));
+  currentForm = [];
+  Pixl.setLCDPower(false);
+  LED.write(0);
+  watchIdleButtons();
+  mode = 0;
+}
 function onClickSnooze() {
   snooze_time = Date() + SNOOZE_TOTAL_TIME_MS;
   stopAlarm();
