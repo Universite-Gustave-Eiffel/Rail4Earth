@@ -57,6 +57,13 @@ def lte_config(args):
                     print("Not ready..")
                     time.sleep(1)
                 print("Should return READY")
+
+                resp = send_command(ser, "AT#SLED?")
+                if not "SLED: 2" in resp: # is STATUS LED enabled
+                    send_command(ser, "AT#GPIO=1,0,2") 
+                    send_command(ser, "AT#SLED=2")
+                    send_command(ser, "AT#SLEDSAV")
+                
                 resp = send_command(ser, "AT+CPIN?")
                 if "SIM PIN" in resp: #require pin code
                     resp = send_command(ser, "AT+CPIN=\"%s\"" % args.pin_code)
