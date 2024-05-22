@@ -28,6 +28,7 @@ class ScanResult:
     device = None
     advertising_data = None
     received_data = io.BytesIO()
+    received_data_time = time.time()
 
     def __init__(self, stop_event):
         self.stop_event = stop_event
@@ -40,6 +41,8 @@ class ScanResult:
 
     def uart_data_received(self, _: BleakGATTCharacteristic, data: bytearray):
         self.received_data.write(data)
+        self.received_data_time = time.time()
+
 
 def process_message(socket, config):
     event = socket.poll(timeout=config.zmq_timeout)
@@ -90,15 +93,24 @@ async def main(config):
                     scan_result.received_data = io.BytesIO()
                     for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
                         await client.write_gatt_char(rx_char, buffer, False)
+                    # wait for end of data arrival
                     await asyncio.sleep(0.5)
+                    while time.time() - scan_result.received_data_time < 1.0:
+                        await asyncio.sleep(0.5)
                     try:
-                        json_data = json.loads(scan_result.received_data.getvalue().decode("utf8"))
+                        json_string = scan_result.received_data.getvalue().decode("utf8")
+                        if "{" not in json_string:
+                            continue
+                        json_string = json_string[json_string.find("{"):json_string.rfind("}")+1]
+                        json_data = json.loads(json_string)
                         # remove item from pixl.js device
-                        for buffer in slice_bytes("\x03\x10formStack.pop(0)\n", rx_char.max_write_without_response_size):
+                        for buffer in slice_bytes(b"\x03\x10formStack.pop(0);updateAdvertisement();\n", rx_char.max_write_without_response_size):
                             await client.write_gatt_char(rx_char, buffer, False)
+                        logger.info("Send json to zmq\n%s" % json_data)
                         socket_out.send_json(json_data)
-                    except json.JSONDecodeError as e:
-                        logger.error("Error while fetching user response", e)
+                    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                        logger.error("Error while decoding %s" %
+                                     json_string, e)
             except (BleakError, asyncio.TimeoutError) as e:
                 logger.error("Send data error", e)
         else:

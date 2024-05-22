@@ -63,7 +63,11 @@ g.setFontPixeloidSans(1);
 function disableButtons() {
   for (id = 0; id < 4; id++) {
     if (button_watch[id] > 0) {
-      clearWatch(button_watch[id]);
+      try {
+        clearWatch(button_watch[id]);
+      } catch(e) {
+        //ignore
+      }
     }
     button_watch[id] = 0;
   }
