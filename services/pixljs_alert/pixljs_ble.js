@@ -148,7 +148,8 @@ function questionBDrawScreen() {
   var y = t.height + 2;
   g.setFontAlign(0.5, 0.5);
   g.drawString("Gêne au passage", g.getWidth() / 2, y);
-  g.drawString(sliderValue == -1 ? "?" : sliderValue, x, g.getHeight()/2);
+  y+=t.height+2;
+  g.drawString(sliderValue == -1 ? "?" : sliderValue, x, y);
   g.setFontAlign(0.5, 1);
   if (sliderValue == 0) {
     g.drawString("Pas du tout", g.getWidth() / 2, knobYPosition);
@@ -249,30 +250,29 @@ function screenQuestionB() {
   sliderValue = -1;
   disableButtons();
   questionBDrawScreen();
-  button_watch[0] = setWatch(e => {
+  button_watch[3] = setWatch(e => {
     if (sliderValue == -1) sliderValue = 0;
     sliderValue = Math.max(0, sliderValue - 1);
     questionBDrawScreen();
-  }, BTN1, {
+  }, BTN4, {
     repeat: true,
     edge: 'rising'
-  }, BTN1);
-  button_watch[1] = setWatch(e => {
+  });
+  button_watch[2] = setWatch(e => {
     if (sliderValue == -1) sliderValue = 10;
     sliderValue = Math.min(10, sliderValue + 1);
     questionBDrawScreen();
-  }, BTN2, {
+  }, BTN3, {
     repeat: true,
     edge: 'rising'
-  }, BTN2);
-  button_watch[2] = setWatch(e => {
+  });
+  button_watch[1] = setWatch(e => {
     recordAnswer('B', sliderValue);
     onQuestionCE(0);
-  }, BTN3, {
+  }, BTN2, {
     repeat: false,
     edge: 'rising'
-  }, BTN2);
-
+  });
 }
 
 function questionCEDrawScreen() {
