@@ -141,7 +141,7 @@ function questionBDrawScreen() {
   g.setFontAlign(1, 1);
   g.drawString(">", g.getWidth(), g.getHeight());
   var x = g.getWidth() / 2; // Calculate the center x-coordinate
-  let text = "Suivant > ";
+  let text = "Valider > ";
   g.setFontAlign(1, -1);
   g.drawString(text, g.getWidth(), 0);
   let t = g.stringMetrics(text);
@@ -278,7 +278,7 @@ function screenQuestionB() {
 function questionCEDrawScreen() {
   g.clear();
   g.setFontAlign(1, -1);
-  text = "Suivant>";
+  text = "Valider >";
   g.drawString(text, g.getWidth(), 0);
   text_metrics = g.stringMetrics(text);
   g.setFontAlign(-1, 0.5);
