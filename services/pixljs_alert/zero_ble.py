@@ -16,13 +16,15 @@ SERVICE_MODE = "0000183b-0000-1000-8000-00805f9b34fb"
 SERVICE_ANSWER_SIZE = "0000180a-0000-1000-8000-00805f9b34fb"
 logger = logging.getLogger(__name__)
 
+
 def uart_data_received(_: BleakGATTCharacteristic, data: bytearray):
     decoded = data.decode('UTF-8')
     logger.info(decoded)
 
 
 def slice_bytes(data: bytes, n: int):
-    return (data[i:i+n] for i in range(0, len(data), n))
+    return (data[i:i + n] for i in range(0, len(data), n))
+
 
 class ScanResult:
     device = None
@@ -77,7 +79,9 @@ async def main(config):
                     nus = client.services.get_service(UART_SERVICE_UUID)
                     rx_char = nus.get_characteristic(UART_RX_CHAR_UUID)
                     now = time.time()
-                    c = (b"\x03\x10if(Math.abs(getTime()-%f) > 300) { setTime(%f);E.setTimeZone(%d);}lastSeen=Date();rssi=%f;\n") % ( now, now, -time.altzone // 3600, scan_result.advertising_data.rssi)
+                    c = (
+                            b"\x03\x10if(Math.abs(getTime()-%f) > 300) { setTime(%f);E.setTimeZone(%d);}lastSeen=Date();rssi=%f;\n") % (
+                        now, now, -time.altzone // 3600, scan_result.advertising_data.rssi)
                     for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
                         await client.write_gatt_char(rx_char, buffer, False)
             except (BleakError, asyncio.TimeoutError) as e:
@@ -101,10 +105,13 @@ async def main(config):
                         json_string = scan_result.received_data.getvalue().decode("utf8")
                         if "{" not in json_string:
                             continue
-                        json_string = json_string[json_string.find("{"):json_string.rfind("}")+1]
+                        json_string = json_string[json_string.find("{"):json_string.rfind("}") + 1]
                         json_data = json.loads(json_string)
+                        json_data["device"] = scan_result.device.name
                         # remove item from pixl.js device
-                        for buffer in slice_bytes(b"\x03\x10formStack.pop(0);updateAdvertisement();\n", rx_char.max_write_without_response_size):
+                        for buffer in slice_bytes(
+                                b"\x03\x10formStack.pop(0);updateAdvertisement();\n",
+                                rx_char.max_write_without_response_size):
                             await client.write_gatt_char(rx_char, buffer, False)
                         logger.info("Send json to zmq\n%s" % json_data)
                         socket_out.send_json(json_data)
@@ -132,13 +139,15 @@ async def main(config):
                         break
                     else:
                         await asyncio.sleep(0.5)
-                # E.pipe(\"mode=\"+mode, Bluetooth);
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='This program read trigger tags from zeromq and display summary on '
-                                                 ' pixl.js device',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--input_address", help="Address for zero_trigger tags", default="tcp://127.0.0.1:10002")
+    parser = argparse.ArgumentParser(
+        description='This program read trigger tags from zeromq and display summary on '
+                    ' pixl.js device',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--input_address", help="Address for zero_trigger tags",
+                        default="tcp://127.0.0.1:10002")
     parser.add_argument("--zmq_timeout", help="Wait for zmq message for x milliseconds",
                         default=1000, type=int)
     parser.add_argument("--max_try", help="Maximum sending data try",
