@@ -1,116 +1,159 @@
 import asyncio
+from bleak.backends.characteristic import BleakGATTCharacteristic
 from bleak import BleakClient, BleakError
 from bleak import BleakScanner
 import logging
 import zmq
 import argparse
 import time
-from colorama import Fore
+import io
+import json
 
-UUID_NORDIC_TX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
-UUID_NORDIC_RX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
+UART_SERVICE_UUID = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
+UART_RX_CHAR_UUID = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
+UART_TX_CHAR_UUID = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
+SERVICE_MODE = "0000183b-0000-1000-8000-00805f9b34fb"
+SERVICE_ANSWER_SIZE = "0000180a-0000-1000-8000-00805f9b34fb"
 logger = logging.getLogger(__name__)
 
 
-def uart_data_received(sender, data):
+def uart_data_received(_: BleakGATTCharacteristic, data: bytearray):
     decoded = data.decode('UTF-8')
-    print(Fore.GREEN + decoded + Fore.RESET, end="")
+    logger.info(decoded)
 
 
-def get_refresh_time_command():
-    now = time.time()
-    return b"\x03\x10if(Math.abs(getTime()-%f) > 300) { setTime(%f);E.setTimeZone(%d);load_parameters();installTimeouts(false);disabledScreen();}\n" % (
-     now, now, -time.altzone // 3600)
+def slice_bytes(data: bytes, n: int):
+    return (data[i:i + n] for i in range(0, len(data), n))
+
+
+class ScanResult:
+    device = None
+    advertising_data = None
+    received_data = io.BytesIO()
+    received_data_time = time.time()
+
+    def __init__(self, stop_event):
+        self.stop_event = stop_event
+
+    def callback(self, d, advertising_data):
+        if d.name and "Pixl.js" in d.name and SERVICE_MODE in advertising_data.service_data:
+            self.device = d
+            self.advertising_data = advertising_data
+            self.stop_event.set()
+
+    def uart_data_received(self, _: BleakGATTCharacteristic, data: bytearray):
+        self.received_data.write(data)
+        self.received_data_time = time.time()
 
 
 def process_message(socket, config):
-    logger.info("Waiting for next zmq message")
-    event = socket.poll(timeout=config.reconnect_ble)
+    event = socket.poll(timeout=config.zmq_timeout)
     if event == 0:
         return ""
     data = socket.recv_json()
     scores = data["scores"]
     if len(scores) > 0:
-        print(repr(scores))
-        return get_refresh_time_command()+b"\x03\x10onTrainCrossing(false);\n"
+        return b"\x03\x10onTrainCrossing(false);\n"
     return ""
 
 
-"""
-How to overwrite Flash:
-
-command:
-"\u0010reset();\n\u0010print()\n\u0010setTime(1681798003.809);E.setTimeZone(2)\n\u0010\u001b[1drequire(\"Storage\").write(\".bootcde\",\"// Disable logging events to screen\\nBluetooth.setConsole(1);\\n\",0,939);\n\u0010\u001b[2dload()\n\n"
-"""
-
-
-
 async def main(config):
-    address = None
-    while address is None:
-        logger.info("Discover BLE devices..")
-        devices = await BleakScanner.discover()
-        for d in devices:
-            if "Pixl.js" in d.name:
-                address = d.address
-                logger.info("Found Pixl.js " + repr(d))
-                break
-        if address is None:
-            logger.info("Could not find Pixl.js device.")
     context = zmq.Context()
     socket = context.socket(zmq.SUB)
     socket.connect(config.input_address)
     socket.subscribe("")
-    last_push = time.time()
-    tries = 0
-    # sync time of pixl.js
-    c = get_refresh_time_command()
+    socket_out = context.socket(zmq.PUB)
+    socket_out.bind(config.output_address)
     while True:
-        if not c:
+        stop_event = asyncio.Event()
+        scan_result = ScanResult(stop_event)
+        async with BleakScanner(scan_result.callback) as scanner:
+            await stop_event.wait()
+        mode = scan_result.advertising_data.service_data[SERVICE_MODE].decode("ascii")
+        answer_stack = int.from_bytes(scan_result.advertising_data.service_data[SERVICE_ANSWER_SIZE]
+                                      , byteorder="big")
+        if mode == "install":
+            try:
+                async with BleakClient(scan_result.device) as client:
+                    await client.start_notify(UART_TX_CHAR_UUID, uart_data_received)
+                    nus = client.services.get_service(UART_SERVICE_UUID)
+                    rx_char = nus.get_characteristic(UART_RX_CHAR_UUID)
+                    now = time.time()
+                    c = (
+                            b"\x03\x10if(Math.abs(getTime()-%f) > 300) { setTime(%f);E.setTimeZone(%d);}lastSeen=Date();rssi=%f;\n") % (
+                        now, now, -time.altzone // 3600, scan_result.advertising_data.rssi)
+                    for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
+                        await client.write_gatt_char(rx_char, buffer, False)
+            except (BleakError, asyncio.TimeoutError) as e:
+                logger.error("Abort communication with pixl.js", e)
+        elif answer_stack > 0:
+            # fetch answer json
+            try:
+                async with BleakClient(scan_result.device) as client:
+                    await client.start_notify(UART_TX_CHAR_UUID, scan_result.uart_data_received)
+                    nus = client.services.get_service(UART_SERVICE_UUID)
+                    rx_char = nus.get_characteristic(UART_RX_CHAR_UUID)
+                    c = b"\x03\x10E.pipe(formStack[0], Bluetooth);\n"
+                    scan_result.received_data = io.BytesIO()
+                    for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
+                        await client.write_gatt_char(rx_char, buffer, False)
+                    # wait for end of data arrival
+                    await asyncio.sleep(0.5)
+                    while time.time() - scan_result.received_data_time < 1.0:
+                        await asyncio.sleep(0.5)
+                    try:
+                        json_string = scan_result.received_data.getvalue().decode("utf8")
+                        if "{" not in json_string:
+                            continue
+                        json_string = json_string[json_string.find("{"):json_string.rfind("}") + 1]
+                        json_data = json.loads(json_string)
+                        json_data["device"] = scan_result.device.name
+                        # remove item from pixl.js device
+                        for buffer in slice_bytes(
+                                b"\x03\x10formStack.pop(0);updateAdvertisement();\n",
+                                rx_char.max_write_without_response_size):
+                            await client.write_gatt_char(rx_char, buffer, False)
+                        logger.info("Send json to zmq\n%s" % json_data)
+                        socket_out.send_json(json_data)
+                    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                        logger.error("Error while decoding %s" %
+                                     json_string, e)
+            except (BleakError, asyncio.TimeoutError) as e:
+                logger.error("Send data error", e)
+        else:
             c = process_message(socket, config)
-        if not c:
-            c = get_refresh_time_command()
-        logger.info("Reconnect to " + repr(address))
-        try:
-            async with BleakClient(address) as client:
-                await client.start_notify(UUID_NORDIC_RX, uart_data_received)
-                while True:
-                    if len(c) > 0:
-                        last_push = time.time()
-                    while len(c) > 0:
-                        await client.write_gatt_char(UUID_NORDIC_TX, bytearray(c[0:20]), True)
-                        c = c[20:]
-                    await asyncio.sleep(0.125)  # wait for a response
-                    tries = 0
-                    event = socket.poll(timeout=config.disconnect_ble_timeout)
-                    if event == 0:
-                        # Timeout, disconnect
+            tries = 0
+            while c:
+                try:
+                    async with BleakClient(scan_result.device) as client:
+                        await client.start_notify(UART_TX_CHAR_UUID, uart_data_received)
+                        nus = client.services.get_service(UART_SERVICE_UUID)
+                        rx_char = nus.get_characteristic(UART_RX_CHAR_UUID)
+                        for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
+                            await client.write_gatt_char(rx_char, buffer, False)
+                        c = ""
+                except (BleakError, asyncio.TimeoutError) as e:
+                    tries += 1
+                    logger.error("Send data error", e)
+                    if tries > config.max_try:
                         break
                     else:
-                        c = process_message(socket)
-                        if len(c) == 0 and time.time() - last_push > config.disconnect_ble_timeout:
-                            # Timeout, disconnect
-                            print("Disconnect bluetooth..")
-                            break
-        except BleakError as e:
-            tries += 1
-            # try to reconnect if Bleak throw an error
-            if tries < 10:
-                await asyncio.sleep(0.125)  # wait for a response
-            else:
-                print(repr(e))
-                break
+                        await asyncio.sleep(0.5)
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='This program read trigger tags from zeromq and display summary on '
-                                                 ' pixl.js device',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--input_address", help="Address for zero_trigger tags", default="tcp://127.0.0.1:10002")
-    parser.add_argument("--disconnect_ble_timeout", help="Disconnect ble if no new message in this delay in"
-                                                         " milliseconds", default=10000, type=int)
-    parser.add_argument("--reconnect_ble", help="Reconnect to pixl.js at "
-                                                "least each milliseconds",
-                        default=300000, type=int)
+    parser = argparse.ArgumentParser(
+        description='This program read trigger tags from zeromq and display summary on '
+                    ' pixl.js device',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--input_address", help="Address for zero_trigger tags",
+                        default="tcp://127.0.0.1:10002")
+    parser.add_argument("--zmq_timeout", help="Wait for zmq message for x milliseconds",
+                        default=1000, type=int)
+    parser.add_argument("--max_try", help="Maximum sending data try",
+                        default=10, type=int)
+    parser.add_argument("--output_address", help="Address for publishing JSON of pixl.js answers",
+                        default="tcp://*:10010")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
     asyncio.run(main(args))
