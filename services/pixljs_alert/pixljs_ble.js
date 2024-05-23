@@ -136,25 +136,25 @@ function questionBDrawScreen() {
     var knobX = Math.round(sliderValue / 10 * sliderWidth) + sliderXPosition;
     g.fillRect(knobX - 2, knobYPosition, knobX + 2, knobYPosition + knobHeight);
   }
-  g.setFontAlign(-1, -1);
-  g.drawString("-", 0, 0);
-  g.setFontAlign(1, -1);
-  g.drawString("+", g.getWidth(), 0);
-  g.setFontAlign(0.5, 0.5);
+  g.setFontAlign(-1, 1);
+  g.drawString("<", 0, g.getHeight());
+  g.setFontAlign(1, 1);
+  g.drawString(">", g.getWidth(), g.getHeight());
   var x = g.getWidth() / 2; // Calculate the center x-coordinate
-  var y = 13 + 15 / 2; // Calculate the center y-coordinate
-  g.drawString(sliderValue == -1 ? "?" : sliderValue, x, y);
+  let text = "Suivant > ";
+  g.setFontAlign(1, -1);
+  g.drawString(text, g.getWidth(), 0);
+  let t = g.stringMetrics(text);
+  var y = t.height + 2;
+  g.setFontAlign(0.5, 0.5);
+  g.drawString("Gêne au passage", g.getWidth() / 2, y);
+  g.drawString(sliderValue == -1 ? "?" : sliderValue, x, g.getHeight()/2);
   g.setFontAlign(0.5, 1);
   if (sliderValue == 0) {
     g.drawString("Pas du tout", g.getWidth() / 2, knobYPosition);
   } else if (sliderValue == 10) {
     g.drawString("Extrêmement", g.getWidth() / 2, knobYPosition);
   }
-  g.setFontAlign(0.0, -1);
-  x = g.getWidth() / 2; // Calculate the center x-coordinate
-  g.drawString("Gêne au passage", x, 0);
-  g.setFontAlign(1, 1);
-  g.drawString("Suivant > ", g.getWidth(), g.getHeight());
   // Update the display
   g.flip();
 }
@@ -281,8 +281,8 @@ function questionCEDrawScreen() {
   text = "Suivant>";
   g.drawString(text, g.getWidth(), 0);
   text_metrics = g.stringMetrics(text);
-  g.setFontAlign(-1, -1);
-  g.drawString(QUESTIONS[questionIndex][0], 0, text_metrics.height);
+  g.setFontAlign(-1, 0.5);
+  g.drawString(QUESTIONS[questionIndex][0], 0, g.getHeight()/2);
   y = text_metrics.height;
   text_metrics = g.stringMetrics(QUESTIONS[questionIndex][0]);
   y += text_metrics.height + 1;
