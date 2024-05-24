@@ -5,16 +5,16 @@ const SNOOZE_TOTAL_TIME_MS = 24 * 3600 * 1000;
 const RESET_NO_ANSWER = 5 * 60 * 1000;
 const QUESTIONS = [
   ["Juste avant la notification,\n où étiez-vous ?",
-    ["Pièce principale", "Autre pièce", "Exterieur"]
+    ["Pièce principale", "Autre pièce", "Extérieur"]
   ],
   ["Juste avant la notification,\nqu'étiez-vous en train de\nfaire ?",
     ["Lire ou se concentrer", "Loisir", "Se reposer ou dormir", "Discuter", "Téléphone", "Tâches ménagères", "Autre"]
   ],
-  ["Avant le passage de train,\nvous diriez que l'ambiance\nsonore à l'intérieur de\nvotre logement était",
+  ["Avant le passage de train,\nvous diriez que l'ambiance\nsonore à l'intérieur de\nvotre logement était :",
     ["Très calme", "Plutôt calme", "Ni calme ni bruyante", "Plutôt bruyante", "Très bruyante"]
   ],
-  ["La/les fenêtre(s)/baie(s)\nvitrée(s) de la pièce où\nvous vous trouviez\nétait/étaient",
-    ["Toute fermées", "Certaines ouvertes"]
+  ["Les fenêtre(s)/baie(s)\nvitrée(s) de la pièce où\nvous vous trouviez\nétaient :",
+    ["Toutes fermées", "Certaines ouvertes", "Toutes ouvertes"]
   ]
 ];
 var PIN_BUZZER = A0; // Yellow cable pin Buzzer is connected to
@@ -247,11 +247,10 @@ function buzzerDelay() {
 }
 
 function screenQuestionB() {
-  sliderValue = -1;
+  sliderValue = 5;
   disableButtons();
   questionBDrawScreen();
   button_watch[3] = setWatch(e => {
-    if (sliderValue == -1) sliderValue = 0;
     sliderValue = Math.max(0, sliderValue - 1);
     questionBDrawScreen();
   }, BTN4, {
@@ -259,7 +258,6 @@ function screenQuestionB() {
     edge: 'rising'
   });
   button_watch[2] = setWatch(e => {
-    if (sliderValue == -1) sliderValue = 10;
     sliderValue = Math.min(10, sliderValue + 1);
     questionBDrawScreen();
   }, BTN3, {
@@ -315,11 +313,12 @@ function onQuestionCE(index) {
   });
   button_watch[1] = setWatch(e => {
     recordAnswer(String.fromCharCode(67 + questionIndex), QUESTIONS[questionIndex][1][answer_index]);
-    answer_index = 0;
-    if (questionIndex + 1 < QUESTIONS.length)
+    if (questionIndex + 1 < QUESTIONS.length) {
+      answer_index = QUESTIONS[questionIndex + 1][1].length/2; // pick mid answer
       onQuestionCE(questionIndex + 1);
-    else
+    } else {
       endForm();
+    }
   }, BTN2, {
     repeat: false,
     edge: 'rising'
@@ -392,6 +391,7 @@ function screenQuestionA() {
   button_watch[2] = setWatch(function() {
     stopAlarm();
     recordAnswer('A', 'non');
+    answer_index = QUESTIONS[questionIndex + 1][1].length/2; // pick mid answer
     onQuestionCE(0);
   }, BTN3, {
     repeat: false,
