@@ -136,10 +136,14 @@ function questionBDrawScreen() {
     var knobX = Math.round(sliderValue / 10 * sliderWidth) + sliderXPosition;
     g.fillRect(knobX - 2, knobYPosition, knobX + 2, knobYPosition + knobHeight);
   }
-  g.setFontAlign(-1, 1);
-  g.drawString("<", 0, g.getHeight());
-  g.setFontAlign(1, 1);
-  g.drawString(">", g.getWidth(), g.getHeight());
+  if(sliderValue > 0) {
+    g.setFontAlign(-1, 1);
+    g.drawString("<", 0, g.getHeight());
+  }
+  if(sliderValue < 10) {
+    g.setFontAlign(1, 1);
+    g.drawString(">", g.getWidth(), g.getHeight());
+  }
   var x = g.getWidth() / 2; // Calculate the center x-coordinate
   let text = "Valider > ";
   g.setFontAlign(1, -1);
@@ -286,15 +290,21 @@ function questionCEDrawScreen() {
   y += text_metrics.height + 1;
   g.setFontAlign(0.5, 1);
   g.drawString(QUESTIONS[questionIndex][1][answer_index], g.getWidth() / 2, g.getHeight());
-  g.setFontAlign(-1, 1);
-  g.drawString("<", 0, g.getHeight());
-  g.setFontAlign(1, 1);
-  g.drawString(">", g.getWidth(), g.getHeight());
+  let answerCount = QUESTIONS[questionIndex][1].length;
+  if(answer_index > 0) {
+    g.setFontAlign(-1, 1);
+    g.drawString("<", 0, g.getHeight());
+  }
+  if(answer_index < answerCount - 1) {
+    g.setFontAlign(1, 1);
+    g.drawString(">", g.getWidth(), g.getHeight());
+  }
   g.flip();
 }
 
 function onQuestionCE(index) {
   questionIndex = index;
+  answer_index = parseInt(QUESTIONS[questionIndex][1].length / 2); // default mid answer
   disableButtons();
   questionCEDrawScreen();
   button_watch[3] = setWatch(e => {
@@ -314,7 +324,6 @@ function onQuestionCE(index) {
   button_watch[1] = setWatch(e => {
     recordAnswer(String.fromCharCode(67 + questionIndex), QUESTIONS[questionIndex][1][answer_index]);
     if (questionIndex + 1 < QUESTIONS.length) {
-      answer_index = QUESTIONS[questionIndex + 1][1].length/2; // pick mid answer
       onQuestionCE(questionIndex + 1);
     } else {
       endForm();
@@ -391,7 +400,6 @@ function screenQuestionA() {
   button_watch[2] = setWatch(function() {
     stopAlarm();
     recordAnswer('A', 'non');
-    answer_index = QUESTIONS[questionIndex + 1][1].length/2; // pick mid answer
     onQuestionCE(0);
   }, BTN3, {
     repeat: false,
