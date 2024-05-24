@@ -6,6 +6,10 @@
     source2: '/home/pi/noisesensor/outsd/'
     destination: '/home/semaphore/data/to_process/'
   tasks:
+  - name: Append year and week to destination folder
+    shell: date +%Y_%W
+    register: year_week
+    delegate_to: localhost
   - name: rsync installed
     ansible.builtin.package:
       name: rsync
@@ -16,14 +20,14 @@
     register: rpi_mac
   - name: Creates directory
     file:
-      path: '{{ destination }}'
+      path: '{{ destination }}{{ year_week }}'
       state: directory
     delegate_to: localhost
   - name: data synchronization
     ansible.posix.synchronize:
       mode: 'pull'
       src: '{{ source }}'
-      dest: '{{ destination }}{{ rpi_mac.stdout }}'
+      dest: '{{ destination }}{{ year_week.stdout }}/{{ rpi_mac.stdout }}'
       rsync_opts:
         - "--remove-source-files"
         - "--exclude='*.tmp'"
@@ -35,7 +39,7 @@
     ansible.posix.synchronize:
       mode: 'pull'
       src: '{{ source2 }}'
-      dest: '{{ destination }}{{ rpi_mac.stdout }}'
+      dest: '{{ destination }}{{ year_week.stdout }}/{{ rpi_mac.stdout }}'
       rsync_opts:
         - "--remove-source-files"
         - "--exclude='*.tmp'"
