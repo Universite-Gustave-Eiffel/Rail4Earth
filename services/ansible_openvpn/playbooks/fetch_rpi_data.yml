@@ -20,7 +20,7 @@
     register: rpi_mac
   - name: Creates directory
     file:
-      path: '{{ destination }}{{ year_week }}'
+      path: '{{ destination }}{{ year_week.stdout }}'
       state: directory
     delegate_to: localhost
   - name: data synchronization
