@@ -53,7 +53,11 @@ def process_message(socket, config):
     data = socket.recv_json()
     scores = data["scores"]
     if len(scores) > 0:
-        return b"\x03\x10onTrainCrossing(false);\n"
+        now = time.time()
+        return (b"\x03\x10if(Math.abs(getTime()-%f) > 300) {"
+                b" setTime(%f);E.setTimeZone(%d);"
+                b"}"
+                b"onTrainCrossing(false);\n") % (now, now, -time.altzone // 3600)
     return ""
 
 
@@ -147,7 +151,7 @@ if __name__ == "__main__":
                     ' pixl.js device',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--input_address", help="Address for zero_trigger tags",
-                        default="tcp://127.0.0.1:10002")
+                        default="tcp://127.0.0.1:10003")
     parser.add_argument("--zmq_timeout", help="Wait for zmq message for x milliseconds",
                         default=1000, type=int)
     parser.add_argument("--max_try", help="Maximum sending data try",
