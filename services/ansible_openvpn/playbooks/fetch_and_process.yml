@@ -4,7 +4,10 @@
   tasks:
     - ansible.builtin.debug:
         msg: Fetch and process
-
+        
+- name: Fetch RPI list
+  ansible.builtin.import_playbook: fetch_openvpn_hosts.yml
+  
 - name: Fetch RPI data using rsync
   ansible.builtin.import_playbook: fetch_rpi_data.yml
 
