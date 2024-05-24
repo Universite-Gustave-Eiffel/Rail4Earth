@@ -13,7 +13,7 @@ const QUESTIONS = [
   ["Avant le passage de train,\nvous diriez que l'ambiance\nsonore à l'intérieur de\nvotre logement était :",
     ["Très calme", "Plutôt calme", "Ni calme ni bruyante", "Plutôt bruyante", "Très bruyante"]
   ],
-  ["Les fenêtre(s)/baie(s)\nvitrée(s) de la pièce où\nvous vous trouviez\nétaient :",
+  ["Les fenêtres/baies\nvitrées de la pièce où\nvous vous trouviez\nétaient :",
     ["Toutes fermées", "Certaines ouvertes", "Toutes ouvertes"]
   ]
 ];
