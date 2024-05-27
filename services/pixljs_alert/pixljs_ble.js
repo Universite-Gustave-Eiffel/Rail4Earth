@@ -1,8 +1,8 @@
 // force timezone to UTC+0200
 E.setTimeZone(2);
-const BUZZING_TIME = 2 * 60 * 1000; // buzzer time ms
+const BUZZING_TIME = 60000; // buzzer time ms
 const SNOOZE_TOTAL_TIME_MS = 24 * 3600 * 1000;
-const RESET_NO_ANSWER = 5 * 60 * 1000;
+const RESET_NO_ANSWER = 60000;
 const QUESTIONS = [
   ["Juste avant la notification,\n où étiez-vous ?",
     ["Pièce principale", "Autre pièce", "Extérieur"]
@@ -38,15 +38,9 @@ var formStack = [];
 var question_index = 0;
 var answer_index = 0;
 Bluetooth.setConsole(1);
-var zzImage = {
-  width: 20,
-  height: 20,
-  bpp: 1,
-  buffer: atob("AAHwAB8GAGDADBwB88AffHwHh8B8GA/DAPx8D+fA/gAH8AB/wMf//D//gf/wD/4AP8A=")
-};
 const tone_times = atob("ZHJkcmRyZHJkcmRyZHJkcmQqZCpkKmRyZHJkKmQqZCpkcmRyZHJkcmRyZHJkKmQqZCpkcmRyZCpkKmQqZHJkcmQqZCpkKmRyZHJkcmRyZHJkcmRyZHJkcmRyZCpkKmQqZHJkcmQqZCpkKmRyZHJkcmRyZHJkcmQqZCpkKmRyZHJkKmQqZCpkcmRyZCpkKmQqZHJkcg==");
 var current_note = 0;
-  const bitmap_font = E.toString(atob('AAAAH0AGAAGAACI/iI/iIABkSX/SRMAGMyAgJmMADYkjUBAUAGAAB4QkCAECQh4AFAQFAAAgOAgAAGAAgEAgAAEAAMCAgIGAAD4gkkgj4AEEgn8AgEACEhkUkjEACIgkkkjYAAwKCQ/gQAHokkkkkYAD4kkkkiYAEEhEQkHAADYkkkkjYADIkkkkj4ABEABGAAgKCIABQKBQACIKAgACAgEUkDAAH8glkknkAA8aEQaA8AH8kkkkjYAD4gkEgiIAH8gkERBwAH8kkkkkEAH8kEgkEAAD4gkkkg8AH8EAgEH8AEE/kEAAYAgE/AA/ggKCIggA/gEAgEAgA/iAIAgICA/gA/kAYAwBH8AD4gkEgj4AH8kEgkDAAD4gkUhD0AH8kEwlDEADIkkkkiYAEAgH8gEAAH4AgEAn4AHAGAMGHAAHwBgwYAwBnwAGMKAgKGMAHAEA8EHAAEMikkomEAH+gUCAGAIAgCAMAECgX+ABAQEAQBAAACAQCAAAgCAAAAAA4IhEFB8AH8FBEIg4AA4IhEIhEAA4IhEFH8AA4KhUKg0ABA/lAAA4IpFFJ+AH8EBAIA8AF8AAEAQCvgA/gQFBEAH8AB8IBAHhAIA8AB8EBAIA8AA4IhEIg4AB/FBEIg4AA4IhEFB/AB8CAgIAAEhUKhUJAAIH8IgAPAEAgEPAAOAIAgIOAAPAEBAwBAEPAAIgoCAoIgAMIZAwYMAAJhUKhUMgAGD8gUCAH+AECgT8GAAEBAEAQEAAAAAAAAAAAXwAHBEfxEIgAEj8kkEQgARBwKBwRAAlCoPiolAA5wAaUplMpSwAAAAAAAAAAfEEulUqkEfAAEFQqFQeAACAoKgoIgAEAgHAAfEEulkikEfAAAAAAAAAAAYEgkDAAAkOgkAEQmFQSAQAEQqFQqCgAAAACAgAAAB/AgEAh4ADA8H+gH+AAgAAAAICAAAAEQiHwCAQADgiEQiDgABEFBUFAQAFQ6BWCQXAFQ6BUC4RAFQ6HWCQXAAMCSiAQEAAPmjEGgPAAPGjEmgPAAPWlEWgPAAPWlEWkPAA8aEQaA8AAPWlEWgPAD8kEgfkkkgAfEFg0ERAAP9JZJJIIAP5JZNJIIAP7JpLJIIA/kkkkkggAoL/IIAIL/oIAYN/YIAgn8ggA/kkgiIOAAP7AmCMgR/AA+oLBII+AA+ILBoI+AA+YNBYI+AA+YNBYM+AD4gkEgj4ACIKAgKCIAD4ikkoj4AB+gKBAJ+AB+AKBgJ+AB+QMBQJ+AH4AgEAn4ABwBCPhBwAH8RCIRBwAD8gEkagIAAckSiCg+AAcESiig+AAcUUiSg+AAcUUiSk+AA4ohElB8AAcUViSg+AA4IhEPhUKgkAA4IpGIhEAAclSqFQaAAcFSqlQaAAcVUqVQaAA4qhUqg0AF8AC+gCAnyAAB8gAcEUiUV8AA+SEgUEeAAckSiEQcAAcESikQcAAcUUiUQcAAcUUiUUcAA4ohEog4AAgVAgAA4JhUMg4AA8gSCAQ8AA8ASCgQ8AA8QUCQQ8AB4ggEgh4AAwBiDhgwAH+FBEIg4ABhjIGjBgAA=='));
+const bitmap_font = E.toString(atob('AAAAH0AGAAGAACI/iI/iIABkSX/SRMAGMyAgJmMADYkjUBAUAGAAB4QkCAECQh4AFAQFAAAgOAgAAGAAgEAgAAEAAMCAgIGAAD4gkkgj4AEEgn8AgEACEhkUkjEACIgkkkjYAAwKCQ/gQAHokkkkkYAD4kkkkiYAEEhEQkHAADYkkkkjYADIkkkkj4ABEABGAAgKCIABQKBQACIKAgACAgEUkDAAH8glkknkAA8aEQaA8AH8kkkkjYAD4gkEgiIAH8gkERBwAH8kkkkkEAH8kEgkEAAD4gkkkg8AH8EAgEH8AEE/kEAAYAgE/AA/ggKCIggA/gEAgEAgA/iAIAgICA/gA/kAYAwBH8AD4gkEgj4AH8kEgkDAAD4gkUhD0AH8kEwlDEADIkkkkiYAEAgH8gEAAH4AgEAn4AHAGAMGHAAHwBgwYAwBnwAGMKAgKGMAHAEA8EHAAEMikkomEAH+gUCAGAIAgCAMAECgX+ABAQEAQBAAACAQCAAAgCAAAAAA4IhEFB8AH8FBEIg4AA4IhEIhEAA4IhEFH8AA4KhUKg0ABA/lAAA4IpFFJ+AH8EBAIA8AF8AAEAQCvgA/gQFBEAH8AB8IBAHhAIA8AB8EBAIA8AA4IhEIg4AB/FBEIg4AA4IhEFB/AB8CAgIAAEhUKhUJAAIH8IgAPAEAgEPAAOAIAgIOAAPAEBAwBAEPAAIgoCAoIgAMIZAwYMAAJhUKhUMgAGD8gUCAH+AECgT8GAAEBAEAQEAAAAAAAAAAAXwAHBEfxEIgAEj8kkEQgARBwKBwRAAlCoPiolAA5wAaUplMpSwAAAAAAAAAAfEEulUqkEfAAEFQqFQeAACAoKgoIgAEAgHAAfEEulkikEfAAAAAAAAAAAYEgkDAAAkOgkAEQmFQSAQAEQqFQqCgAAAACAgAAAB/AgEAh4ADA8H+gH+AAgAAAAICAAAAEQiHwCAQADgiEQiDgABEFBUFAQAFQ6BWCQXAFQ6BUC4RAFQ6HWCQXAAMCSiAQEAAPmjEGgPAAPGjEmgPAAPWlEWgPAAPWlEWkPAA8aEQaA8AAPWlEWgPAD8kEgfkkkgAfEFg0ERAAP9JZJJIIAP5JZNJIIAP7JpLJIIA/kkkkkggAoL/IIAIL/oIAYN/YIAgn8ggA/kkgiIOAAP7AmCMgR/AA+oLBII+AA+ILBoI+AA+YNBYI+AA+YNBYM+AD4gkEgj4ACIKAgKCIAD4ikkoj4AB+gKBAJ+AB+AKBgJ+AB+QMBQJ+AH4AgEAn4ABwBCPhBwAH8RCIRBwAD8gEkagIAAckSiCg+AAcESiig+AAcUUiSg+AAcUUiSk+AA4ohElB8AAcUViSg+AA4IhEPhUKgkAA4IpGIhEAAclSqFQaAAcFSqlQaAAcVUqVQaAA4qhUqg0AF8AC+gCAnyAAB8gAcEUiUV8AA+SEgUEeAAckSiEQcAAcESikQcAAcUUiUQcAAcUUiUUcAA4ohEog4AAgVAgAA4JhUMg4AA8gSCAQ8AA8ASCgQ8AA8QUCQQ8AB4ggEgh4AAwBiDhgwAH+FBEIg4ABhjIGjBgAA=='));
 const police_heights = E.toString(atob("AwIEBgYGBgIEBAQEAgQCBgYGBgYGBgYGBgYCAgQEBAYGBgYGBgYGBgYEBQYGCAcGBgYGBgYGBggGBgYEBgQGBAYGBgYGBgQGBgIFBQIIBgYGBgUGBAYGCAYGBgUCBQYAAAAAAAADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADAgYGBgYCBgYIBgYEAAgGBQQGBgYGBgIGBgYGBgYGBgYGBgYGBgcGBgYGBgQEBAQGBwYGBgYGBgYGBgYGBgYGBgYGBgYGCAYGBgYGAgIEAgYGBgYGBgYEBgYGBgYGBgY="));
 Graphics.prototype.setFontPixeloidSans = function(scale) {
   // Actual height 9 (8 - 0)
@@ -65,7 +59,7 @@ function disableButtons() {
     if (button_watch[id] > 0) {
       try {
         clearWatch(button_watch[id]);
-      } catch(e) {
+      } catch (e) {
         //ignore
       }
     }
@@ -75,16 +69,28 @@ function disableButtons() {
 
 function watchIdleButtons() {
   disableButtons();
-  button_watch[0] = setWatch(onPressButtonInstallMode, BTN1, {
-    repeat: true,
-    edge: 'both',
-    debounce: 10
-  });
-  button_watch[1] = setWatch(onPressButtonTrainDemo, BTN2, {
-    repeat: true,
-    edge: 'both',
-    debounce: 10
-  });
+  setTimeout(e => {
+    button_watch[0] = setWatch(onPressButtonInstallMode, BTN1, {
+      repeat: true,
+      edge: 'both',
+      debounce: 10
+    });
+    button_watch[1] = setWatch(onPressButtonTrainDemo, BTN2, {
+      repeat: true,
+      edge: 'both',
+      debounce: 10
+    });
+    button_watch[2] = setWatch(screenIdle, BTN3, {
+      repeat: false,
+      edge: 'falling',
+      debounce: 10
+    });
+    button_watch[3] = setWatch(screenIdle, BTN4, {
+      repeat: false,
+      edge: 'falling',
+      debounce: 10
+    });
+  }, 2000);
 }
 
 function updateAdvertisement() {
@@ -99,9 +105,16 @@ function updateAdvertisement() {
 function switchStateInstall(newMode) {
   mode = newMode;
   updateAdvertisement();
+  if(mode==1) {
+    Pixl.setLCDPower(true);
+    LED.write(1);
+    disableButtons();
+  }
   installScreen();
   if (mode) {
     setTimeout(switchStateInstall, 15 * 60000, false);
+  } else {
+    watchIdleButtons();
   }
 }
 
@@ -117,6 +130,7 @@ function rssiPowerHint() {
 
 // Function to draw the slider
 function questionBDrawScreen() {
+  installResetTimeout();
   let sliderWidth = 100;
   let sliderHeight = 10;
   let knobHeight = 15;
@@ -136,11 +150,11 @@ function questionBDrawScreen() {
     var knobX = Math.round(sliderValue / 10 * sliderWidth) + sliderXPosition;
     g.fillRect(knobX - 2, knobYPosition, knobX + 2, knobYPosition + knobHeight);
   }
-  if(sliderValue > 0) {
+  if (sliderValue > 0) {
     g.setFontAlign(-1, 1);
     g.drawString("<", 0, g.getHeight());
   }
-  if(sliderValue < 10) {
+  if (sliderValue < 10) {
     g.setFontAlign(1, 1);
     g.drawString(">", g.getWidth(), g.getHeight());
   }
@@ -152,7 +166,7 @@ function questionBDrawScreen() {
   var y = t.height + 2;
   g.setFontAlign(0.5, 0.5);
   g.drawString("Gêne au passage", g.getWidth() / 2, y);
-  y+=t.height+2;
+  y += t.height + 2;
   g.drawString(sliderValue == -1 ? "?" : sliderValue, x, y);
   g.setFontAlign(0.5, 1);
   if (sliderValue == 0) {
@@ -166,28 +180,23 @@ function questionBDrawScreen() {
 
 function installScreen() {
   if (mode == 1) {
-    var y = 0;
-    Pixl.setLCDPower(true);
-    LED.write(1);
     g.clear();
     text = "Installation mode";
-    text_metrics = g.stringMetrics(text);
-    g.drawString(text, g.getWidth() / 2 - text_metrics.width / 2, 0);
-    y += text_metrics.height;
+    g.setFontAlign(0.5, -1);
+    g.drawString(text, g.getWidth() / 2, 0);
     let diff = Date().valueOf() - lastSeen.valueOf();
     if (diff > TIMEOUT_RPI) {
       text = "No Rpi Connection";
     } else {
       text = "Vu il y a " + parseInt(diff / 1000) + " secondes";
     }
-    text_metrics = g.stringMetrics(text);
-    y = g.getHeight() / 2 - text_metrics.height / 2;
-    g.drawString(text, g.getWidth() / 2 - text_metrics.width / 2, y);
-    y += text_metrics.height;
+    g.setFontAlign(0.5, 0.5);
+    g.drawString(text, g.getWidth() / 2 , g.getHeight() / 2);
+    let text_metrics = g.stringMetrics(text);
     if (diff < TIMEOUT_RPI) {
       text = "RSSI: " + rssi + " dB (" + rssiPowerHint() + ")";
-      text_metrics = g.stringMetrics(text);
-      g.drawString(text, g.getWidth() / 2 - text_metrics.width / 2, y);
+      g.setFontAlign(0.5, -1);
+      g.drawString(text, g.getWidth() / 2, g.getHeight()/2+text_metrics.height);
     }
     g.flip();
     setTimeout(installScreen, 125);
@@ -198,11 +207,19 @@ function installScreen() {
 }
 
 function onPressButtonInstallMode() {
+  try {
+    clearTimeout(timeout_switch);
+    timeout_switch = 0;
+  } catch (e) {
+    //ignore
+  }
   let state = digitalRead(BTN1);
   if (state) {
     timeout_switch = setTimeout(switchStateInstall, MODE_SWITCH_MILLI, !mode);
   } else {
-    clearTimeout(timeout_switch);
+    if(mode==0) {
+      screenIdle();
+    }
   }
 }
 
@@ -212,6 +229,9 @@ function onPressButtonTrainDemo() {
   if (state) {
     timeout_switch = setTimeout(onTrainCrossing, MODE_SWITCH_MILLI, false);
   } else {
+    if(mode==0) {
+      screenIdle();
+    }
     clearTimeout(timeout_switch);
   }
 }
@@ -278,24 +298,25 @@ function screenQuestionB() {
 }
 
 function questionCEDrawScreen() {
+  installResetTimeout();
   g.clear();
   g.setFontAlign(1, -1);
   text = "Valider >";
   g.drawString(text, g.getWidth(), 0);
   text_metrics = g.stringMetrics(text);
   g.setFontAlign(-1, 0.5);
-  g.drawString(QUESTIONS[questionIndex][0], 0, g.getHeight()/2);
+  g.drawString(QUESTIONS[questionIndex][0], 0, g.getHeight() / 2);
   y = text_metrics.height;
   text_metrics = g.stringMetrics(QUESTIONS[questionIndex][0]);
   y += text_metrics.height + 1;
   g.setFontAlign(0.5, 1);
   g.drawString(QUESTIONS[questionIndex][1][answer_index], g.getWidth() / 2, g.getHeight());
   let answerCount = QUESTIONS[questionIndex][1].length;
-  if(answer_index > 0) {
+  if (answer_index > 0) {
     g.setFontAlign(-1, 1);
     g.drawString("<", 0, g.getHeight());
   }
-  if(answer_index < answerCount - 1) {
+  if (answer_index < answerCount - 1) {
     g.setFontAlign(1, 1);
     g.drawString(">", g.getWidth(), g.getHeight());
   }
@@ -368,24 +389,35 @@ function recordAnswer(questionIndex, answers) {
   print(JSON.stringify(Object.fromEntries(currentForm)));
 }
 
-function screenQuestionA() {
-  mode = 2;
-  currentForm = [];
+function installResetTimeout() {
   if (timeout_reset > 0) {
-    clearTimeout(timeout_reset);
+    try {
+      clearTimeout(timeout_reset);
+    } catch (e) {
+      //ignore
+    }
   }
   timeout_reset = setTimeout(a => {
     timeout_reset = 0;
     switchStateInstall(0);
   }, RESET_NO_ANSWER);
+}
+
+function screenQuestionA() {
+  installResetTimeout();
+  mode = 2;
+  currentForm = [];
   Pixl.setLCDPower(true);
   LED.write(1);
   g.clear();
-  g.drawImage(zzImage, 0, 0);
+  let text = "Désactiver 24H";
+  text_metrics = g.stringMetrics(text);
+  g.setFontAlign(-1, -1);
+  g.drawString(text, 0, 0);
   text = "Avez-vous entendu un \ntrain juste avant la \nnotification ?";
   text_metrics = g.stringMetrics(text);
   g.setFontAlign(-1, -1);
-  g.drawString(text, g.getWidth() / 2 - text_metrics.width / 2, zzImage.height + 1);
+  g.drawString(text, g.getWidth() / 2 - text_metrics.width / 2, text_metrics.height + 1);
   g.setFontAlign(-1, 1);
   g.drawString("Oui", 0, g.getHeight());
   g.setFontAlign(1, 1);
@@ -416,5 +448,56 @@ function screenQuestionA() {
     debounce: 10
   });
 }
+
+function screenIdle() {
+  disableButtons();
+  button_watch[0] = setWatch(onPressButtonInstallMode, BTN1, {
+    repeat: true,
+    edge: 'both',
+    debounce: 10
+  });
+  button_watch[1] = setWatch(e => {
+    mode = 2;
+    currentForm = [];
+    trainCrossingTime = Date();
+    recordAnswer('A', "user");
+    screenQuestionB();
+  }, BTN2, {
+    repeat: false,
+    edge: 'rising'
+  });
+  Pixl.setLCDPower(true);
+  LED.write(1);
+  g.clear();
+  g.setFontAlign(1, -1);
+  g.drawString("Un passage m'a gêné>\naccéder au questionnaire", g.getWidth(), 0);
+  g.setFontAlign(1, 1);
+  let text = "Mettre en veille>";
+  let remainSnooze = snooze_time - Date().valueOf();
+  if (remainSnooze > 0) {
+    text = "Reste " + parseInt(remainSnooze / (60000)) + " minutes.\nActiver le boitier>";
+    button_watch[2] = setWatch(e => {
+      snooze_time = 0;
+      screenIdle();
+    }, BTN3, {
+      repeat: false,
+      edge: 'rising',
+      debounce: 10
+    });
+  } else {
+    button_watch[2] = setWatch(onClickSnooze, BTN3, {
+      repeat: false,
+      edge: 'rising',
+      debounce: 10
+    });
+  }
+  g.drawString(text, g.getWidth(), g.getHeight());
+  text = "Pixl.js " + NRF.getAddress().substr(12, 5).replace(":", "");
+  g.setFontAlign(0.5, 0.5);
+  g.drawString(text, g.getWidth() / 2, g.getHeight() / 2);
+  g.flip();
+  installResetTimeout();
+}
+
 updateAdvertisement();
 watchIdleButtons();
