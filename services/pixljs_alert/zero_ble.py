@@ -1,4 +1,5 @@
 import asyncio
+from threading import Thread
 from bleak.backends.characteristic import BleakGATTCharacteristic
 from bleak import BleakClient, BleakError
 from bleak import BleakScanner
@@ -26,18 +27,42 @@ def slice_bytes(data: bytes, n: int):
     return (data[i:i + n] for i in range(0, len(data), n))
 
 
+class BleTracking:
+    known_devices = {}
+    known_devices_last_report = {}
+
+    def on_found_device(self, device):
+        self.known_devices[device.name] = time.time()
+
+    def run(self):
+        while True:
+            # look for missing devices
+            for k, v in self.known_devices_last_report.items():
+                if k not in self.known_devices.keys():
+                    print("Device %s lost since %ld" % (k, v))
+            # look for new devices
+            for k, v in self.known_devices.items():
+                if k not in self.known_devices_last_report.keys():
+                    print("New Device %s since %ld" % (k, v))
+            self.known_devices_last_report = self.known_devices
+            self.known_devices = {}
+            time.sleep(300)
+
+
 class ScanResult:
     device = None
     advertising_data = None
     received_data = io.BytesIO()
     received_data_time = time.time()
 
-    def __init__(self, stop_event):
+    def __init__(self, stop_event, ble_tracking: BleTracking):
         self.stop_event = stop_event
+        self.ble_tracking = ble_tracking
 
     def callback(self, d, advertising_data):
         if d.name and "Pixl.js" in d.name and SERVICE_MODE in advertising_data.service_data:
             self.device = d
+            self.ble_tracking.on_found_device(d)
             self.advertising_data = advertising_data
             self.stop_event.set()
 
@@ -68,9 +93,12 @@ async def main(config):
     socket.subscribe("")
     socket_out = context.socket(zmq.PUB)
     socket_out.bind(config.output_address)
+    ble_tracking = BleTracking()
+    # will kill when program end
+    ble_tracking_thread = Thread(target=ble_tracking.run, daemon=True)
     while True:
         stop_event = asyncio.Event()
-        scan_result = ScanResult(stop_event)
+        scan_result = ScanResult(stop_event, ble_tracking)
         async with BleakScanner(scan_result.callback) as scanner:
             await stop_event.wait()
         mode = scan_result.advertising_data.service_data[SERVICE_MODE].decode("ascii")
