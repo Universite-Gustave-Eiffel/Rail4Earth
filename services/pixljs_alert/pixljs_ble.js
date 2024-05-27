@@ -1,7 +1,6 @@
 // force timezone to UTC+0200
 E.setTimeZone(2);
 const BUZZING_TIME = 60000; // buzzer time ms
-const SNOOZE_TOTAL_TIME_MS = 24 * 3600 * 1000;
 const RESET_NO_ANSWER = 60000;
 const QUESTIONS = [
   ["Juste avant la notification,\n où étiez-vous ?",
@@ -109,6 +108,10 @@ function switchStateInstall(newMode) {
     Pixl.setLCDPower(true);
     LED.write(1);
     disableButtons();
+    button_watch[0] = setWatch(switchStateInstall, BTN1, {
+      repeat: false,
+      debounce: 10
+    },0);
   }
   installScreen();
   if (mode) {
@@ -181,25 +184,19 @@ function questionBDrawScreen() {
 function installScreen() {
   if (mode == 1) {
     g.clear();
-    text = "Installation mode";
     g.setFontAlign(0.5, -1);
+    let text = "Installation mode\nPixl.js " + NRF.getAddress().substr(12, 5).replace(":", "");
     g.drawString(text, g.getWidth() / 2, 0);
     let diff = Date().valueOf() - lastSeen.valueOf();
     if (diff > TIMEOUT_RPI) {
       text = "No Rpi Connection";
     } else {
-      text = "Vu il y a " + parseInt(diff / 1000) + " secondes";
+      text = "Vu il y a " + parseInt(diff / 1000) + " secondes\nRSSI: " + rssi + " dB (" + rssiPowerHint() + ")"
     }
     g.setFontAlign(0.5, 0.5);
     g.drawString(text, g.getWidth() / 2 , g.getHeight() / 2);
-    let text_metrics = g.stringMetrics(text);
-    if (diff < TIMEOUT_RPI) {
-      text = "RSSI: " + rssi + " dB (" + rssiPowerHint() + ")";
-      g.setFontAlign(0.5, -1);
-      g.drawString(text, g.getWidth() / 2, g.getHeight()/2+text_metrics.height);
-    }
     g.flip();
-    setTimeout(installScreen, 125);
+    setTimeout(installScreen, 500);
   } else {
     Pixl.setLCDPower(false);
     LED.write(0);
@@ -376,7 +373,10 @@ function endForm() {
 }
 
 function onClickSnooze() {
-  snooze_time = Date() + SNOOZE_TOTAL_TIME_MS;
+  snooze_time = Date();
+  snooze_time.setHours(23);
+  snooze_time.setMinutes(59);
+  snooze_time.setSeconds(59);
   stopAlarm();
   Pixl.setLCDPower(false);
   LED.write(0);
@@ -475,7 +475,7 @@ function screenIdle() {
   let text = "Mettre en veille>";
   let remainSnooze = snooze_time - Date().valueOf();
   if (remainSnooze > 0) {
-    text = "Reste " + parseInt(remainSnooze / (60000)) + " minutes.\nActiver le boitier>";
+    text = parseInt(remainSnooze / (60000)) + " minutes de veille.\nRéactiver le boitier>";
     button_watch[2] = setWatch(e => {
       snooze_time = 0;
       screenIdle();
@@ -492,9 +492,6 @@ function screenIdle() {
     });
   }
   g.drawString(text, g.getWidth(), g.getHeight());
-  text = "Pixl.js " + NRF.getAddress().substr(12, 5).replace(":", "");
-  g.setFontAlign(0.5, 0.5);
-  g.drawString(text, g.getWidth() / 2, g.getHeight() / 2);
   g.flip();
   installResetTimeout();
 }
