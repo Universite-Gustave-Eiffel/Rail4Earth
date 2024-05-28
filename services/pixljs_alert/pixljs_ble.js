@@ -473,9 +473,12 @@ function screenIdle() {
   g.drawString("Un passage m'a gêné>\naccéder au questionnaire", g.getWidth(), 0);
   g.setFontAlign(1, 1);
   let text = "Mettre en veille>";
-  let remainSnooze = snooze_time - Date().valueOf();
+  let remainSnooze = (snooze_time - Date().valueOf())/1000.0;
   if (remainSnooze > 0) {
-    text = parseInt(remainSnooze / (60000)) + " minutes de veille.\nRéactiver le boitier>";
+    text = "Encore ";
+    if(remainSnooze>=3600)
+      text += parseInt(remainSnooze / 3600) + "h";
+    text += parseInt((remainSnooze % 3600)/60) + "m de veille.\nRéactiver le boitier>";
     button_watch[2] = setWatch(e => {
       snooze_time = 0;
       screenIdle();
