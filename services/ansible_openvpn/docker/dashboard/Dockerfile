@@ -1,6 +1,9 @@
 FROM python:3.9
 
-RUN useradd -ms /bin/bash dashboard
+RUN groupadd -g 1000 dashboard && \
+    adduser --uid 1000 --gid 1000 --home /home/dashboard dashboard && \
+    adduser dashboard root && \
+    chown -R dashboard:0 /home/dashboard
 
 WORKDIR /home/dashboard
 

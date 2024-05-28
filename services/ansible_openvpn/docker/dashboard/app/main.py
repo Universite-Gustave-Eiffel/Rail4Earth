@@ -44,14 +44,15 @@ app.mount("/fonts", StaticFiles(directory="app/fonts"), name="fonts")
 
 templates = Jinja2Templates(directory="app/templates")
 
-if not os.path.exists("app/config.json"):
+if not os.path.exists("certs/api.json"):
     raise Exception("Configuration file not found " +
-                    os.path.abspath("app/config.json"))
-configuration = json.load(open("app/config.json", "r"))
+                    os.path.abspath("certs/api.json"))
+configuration = json.load(open("certs/api.json", "r"))
 
 client = Elasticsearch(
     configuration.get("url", "https://es01:9200"),
     api_key=(configuration["id"], configuration["api_key"]),
+    ca_certs="certs/ca/ca.crt",
     verify_certs=configuration.get("verify_certs", True), request_timeout=60
 )
 

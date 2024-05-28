@@ -47,7 +47,6 @@ services:
     network_mode: "service:openvpn"
     volumes:
       - semaphore-data:/home/semaphore/data/:z
-      - dashboard_website:/home/semaphore/dashboard_website:rw
     depends_on:
       - mysql # for postgres, change to: postgres
       - openvpn
@@ -95,6 +94,10 @@ services:
         until curl -s --cacert config/certs/ca/ca.crt https://es01:9200 | grep -q "missing authentication credentials"; do sleep 30; done;
         echo "Setting kibana_system password";
         until curl -s -X POST --cacert config/certs/ca/ca.crt -u "elastic:${ELASTIC_PASSWORD}" -H "Content-Type: application/json" https://es01:9200/_security/user/kibana_system/_password -d "{\"password\":\"${KIBANA_PASSWORD}\"}" | grep -q "^{}"; do sleep 10; done;
+        if [ ! -f config/certs/api.json ]; then
+          echo "Create API key for web dashboard";
+          curl -s -X POST --cacert config/certs/ca/ca.crt -u "elastic:${ELASTIC_PASSWORD}" -H "Content-Type: application/json" https://es01:9200/_security/api_key -d "{\"name\":\"dashboard\"}" -o config/certs/api.json;
+        fi;
         echo "All done!";
       '
     healthcheck:
@@ -112,8 +115,8 @@ services:
       - certs:/usr/share/elasticsearch/config/certs
       - esdata01:/usr/share/elasticsearch/data
       - es_snapshots:/snapshot
-    ports:
-      - ${ES_PORT}:9200
+    #ports:
+    #  - ${ES_PORT}:9200
     environment:
       - node.name=es01
       - path.repo=/snapshot
@@ -183,16 +186,7 @@ services:
     environment:
       WATCHFILES_FORCE_POLLING: true
     volumes:
-      - dashboard_website:/home/dashboard:ro
-  autoconfig:
-    build:
-      context: autoconfig
-    restart: "no"
-    environment:
-      OPENVPN_MANAGEMENT_PASSWORD: ${OPENVPN_MANAGEMENT_PASSWORD}
-      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
-      SEMAPHORE_ADMIN_PASSWORD: ${SEMAPHORE_ADMIN_PASSWORD}
-      SEMAPHORE_ADMIN_NAME: admin
+      - certs:/home/dashboard/certs
 volumes:
   semaphore-mysql:
     driver: local
@@ -205,6 +199,4 @@ volumes:
   kibanadata:
     driver: local
   es_snapshots:
-    driver: local
-  dashboard_website:
     driver: local
