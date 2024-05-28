@@ -9,6 +9,9 @@ import argparse
 import time
 import io
 import json
+import datetime
+import signal
+from threading import Event
 
 UART_SERVICE_UUID = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
 UART_RX_CHAR_UUID = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -27,27 +30,52 @@ def slice_bytes(data: bytes, n: int):
     return (data[i:i + n] for i in range(0, len(data), n))
 
 
+def time_to_iso(seconds_since_epoch):
+    dt = datetime.datetime.utcfromtimestamp(seconds_since_epoch)
+    # Convert the datetime object to an ISO-formatted string
+    return dt.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+
 class BleTracking:
     known_devices = {}
     known_devices_last_report = {}
+    reports = {}
+    running = True
+
+    def __init__(self, socket_out_lost, t: Event):
+        self.socket_out_lost = socket_out_lost
+        self.t = t
 
     def on_found_device(self, device):
         self.known_devices[device.name] = time.time()
 
+    def stop(self, sig, frame):
+        logger.warning("Interrupted by %d, shutting down" % sig)
+        self.running = False
+        for k, v in self.known_devices.items():
+            self.reports[k]["lastSeen"] = time_to_iso(v)
+            self.socket_out_lost.send_json(self.reports[k])
+        # stop main process
+        self.t.set()
+
     def run(self):
-        while True:
+        self.t.wait(2)
+        while self.running:
             # look for missing devices
             for k, v in self.known_devices_last_report.items():
                 if k not in self.known_devices.keys():
-                    print("Device %s lost since %ld" % (k, v))
+                    self.reports[k]["lastSeen"] = time_to_iso(v)
+                    self.socket_out_lost.send_json(self.reports[k])
+                    print("Device %s lost since %s" % (k, time_to_iso(v)))
             # look for new devices
             for k, v in self.known_devices.items():
                 if k not in self.known_devices_last_report.keys():
-                    print("New Device %s since %ld" % (k, v))
+                    print("New Device %s since %s" % (k, time_to_iso(v)))
+                    self.reports[k] = {"firstSeen": time_to_iso(v), "device": k}
             self.known_devices_last_report = self.known_devices
             self.known_devices = {}
-            time.sleep(300)
-
+            self.t.wait(300)
+        print("Exiting daemon")
 
 class ScanResult:
     device = None
@@ -87,16 +115,24 @@ def process_message(socket, config):
 
 
 async def main(config):
+    t = Event()
     context = zmq.Context()
     socket = context.socket(zmq.SUB)
     socket.connect(config.input_address)
     socket.subscribe("")
     socket_out = context.socket(zmq.PUB)
     socket_out.bind(config.output_address)
-    ble_tracking = BleTracking()
+    socket_out_lost = context.socket(zmq.PUB)
+    socket_out_lost.bind(config.output_address_lost)
+    ble_tracking = BleTracking(socket_out_lost, t)
     # will kill when program end
     ble_tracking_thread = Thread(target=ble_tracking.run, daemon=True)
-    while True:
+    ble_tracking_thread.start()
+    signal.signal(signal.SIGTERM,
+                  lambda sig, frame: ble_tracking.stop(sig, frame))
+    signal.signal(signal.SIGINT,
+                  lambda sig, frame: ble_tracking.stop(sig, frame))
+    while not t.is_set():
         stop_event = asyncio.Event()
         scan_result = ScanResult(stop_event, ble_tracking)
         async with BleakScanner(scan_result.callback) as scanner:
@@ -186,6 +222,7 @@ if __name__ == "__main__":
                         default=10, type=int)
     parser.add_argument("--output_address", help="Address for publishing JSON of pixl.js answers",
                         default="tcp://*:10010")
-    args = parser.parse_args()
+    parser.add_argument("--output_address_lost", help="Address for publishing pixl.js lost event",
+                        default="tcp://*:10011")
     logging.basicConfig(level=logging.INFO)
-    asyncio.run(main(args))
+    asyncio.run(main(parser.parse_args()))
