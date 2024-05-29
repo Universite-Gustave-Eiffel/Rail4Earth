@@ -11,8 +11,6 @@ COPY ./requirements.txt /home/dashboard/requirements.txt
 
 RUN pip install --no-cache-dir --upgrade -r /home/dashboard/requirements.txt
 
-COPY ./app /home/dashboard/app
-
 USER dashboard
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80", "--reload","--reload-dir", "app" , "--reload-include", "**/*.*"]

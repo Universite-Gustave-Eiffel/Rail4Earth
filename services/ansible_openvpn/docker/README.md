@@ -125,7 +125,7 @@ KIBANA_URL=https://kibana.mydomain.org
 OPENVPN_MANAGEMENT_PASSWORD=YOUR_OPENVPN_MANAGEMENT_CONSOLE_PASSWORD
 ```
 
-SEMAPHORE_ACCESS_KEY_ENCRYPTION value is generated with 
+SEMAPHORE_ACCESS_KEY_ENCRYPTION value is generated with (you can generate other password with this tool too)
 
 ```shell
 head -c32 /dev/urandom | base64

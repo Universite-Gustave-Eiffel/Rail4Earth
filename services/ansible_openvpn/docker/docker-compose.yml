@@ -187,6 +187,7 @@ services:
       WATCHFILES_FORCE_POLLING: true
     volumes:
       - certs:/home/dashboard/certs
+      - ./dashboard/app:/home/dashboard/app
 volumes:
   semaphore-mysql:
     driver: local
