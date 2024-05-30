@@ -27,6 +27,9 @@
 #  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 #  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+import logging
+
+import elasticsearch
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -131,10 +134,13 @@ async def recordings(request: Request):
                                       context={"request": request})
 
 
-@app.get('/agenda', response_class=HTMLResponse)
-async def recordings(request: Request):
-    return templates.TemplateResponse("alert_agenda.html",
-                                      context={"request": request})
+@app.get("/api/agenda/{sensor_id}")
+async def get_sensor_last_record(request: Request, sensor_id: str):
+    try:
+        resp = client.get(index="sensor_agenda", id=sensor_id)
+        return resp["_source"]
+    except elasticsearch.NotFoundError as e:
+        return {}
 
 
 @app.get('/get-samples/{document_id}')

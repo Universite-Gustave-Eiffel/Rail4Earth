@@ -11,11 +11,13 @@ import time
 import io
 import json
 import datetime
-from datetime import datetime
 import signal
 from threading import Event
 from urllib.error import HTTPError
 from urllib.request import urlopen
+import fcntl
+import socket
+import struct
 
 UART_SERVICE_UUID = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
 UART_RX_CHAR_UUID = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -24,6 +26,16 @@ SERVICE_MODE = "0000183b-0000-1000-8000-00805f9b34fb"
 SERVICE_ANSWER_SIZE = "0000180a-0000-1000-8000-00805f9b34fb"
 FILE_URI = "file://"
 logger = logging.getLogger(__name__)
+
+
+def get_hw_address(interface_name):
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        info = fcntl.ioctl(s.fileno(), 0x8927, struct.pack(
+            '256s', bytes(interface_name, 'utf-8')[:15]))
+        return ''.join('%02x' % b for b in info[18:24])
+    except OSError:
+        return ""
 
 
 def uart_data_received(_: BleakGATTCharacteristic, data: bytearray):
@@ -162,11 +174,7 @@ def process_message(socket, config, agenda):
 async def main(config):
     # agenda example
     agenda = {
-        "days": {
-            "2024-05-30": {
-                "time_ranges": [
-                    {"start": "10:00", "end": "11:30"},
-                    {"start": "14:00", "end": "16:00"}]}},
+        "days": {},
         "last_fetch": 0}
     t = Event()
     context = zmq.Context()
@@ -178,7 +186,9 @@ async def main(config):
     socket_out_lost = context.socket(zmq.PUB)
     socket_out_lost.bind(config.output_address_lost)
     ble_tracking = BleTrackingDaemon(socket_out_lost, t)
-    agenda_update = AgendaUpdateDaemon("file:///tmp/agenda.json", t, agenda)
+    # json file can be local file ex: "file:///tmp/agenda.json"
+    agenda_url = "https://dashboard.raw.noise-planet.org/api/agenda/"+get_hw_address("eth0")
+    agenda_update = AgendaUpdateDaemon(agenda_url, t, agenda)
     # will kill when program end
     ble_tracking_thread = Thread(target=ble_tracking.run, daemon=True)
     ble_tracking_thread.start()
