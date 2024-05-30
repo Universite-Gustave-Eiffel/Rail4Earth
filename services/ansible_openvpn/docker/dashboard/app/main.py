@@ -131,6 +131,12 @@ async def recordings(request: Request):
                                       context={"request": request})
 
 
+@app.get('/agenda', response_class=HTMLResponse)
+async def recordings(request: Request):
+    return templates.TemplateResponse("alert_agenda.html",
+                                      context={"request": request})
+
+
 @app.get('/get-samples/{document_id}')
 async def get_samples(request: Request, document_id: str):
     post_data = json.loads(

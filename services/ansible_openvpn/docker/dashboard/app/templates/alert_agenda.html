@@ -10,7 +10,6 @@
     <script type="text/javascript" src="static/download.min.js"></script>
     <script type="text/javascript" src="static/daterangepicker.min.js"></script>
     <script type="text/javascript" src="static/handsontable.full.js"></script>
-    <script type="text/javascript" src="static/trigger.js"></script>
     <link type="text/css" href="static/handsontable.full.css" rel="stylesheet" media="screen">
     <link rel="stylesheet" type="text/css" href="static/daterangepicker.css"/>
     <link rel="stylesheet" type="text/css" href="static/forms.css"/>
@@ -26,40 +25,24 @@
     </ul>
 </div>
 <div class="form-style-7">
-    <h1>Samples</h1>
-    <div id="error_panel" class="msg_error" style="visibility: hidden;">
-        Invalid decryption key or password
-    </div>
+    <h1>Alert Agenda</h1>
+    <div id="error_panel" class="msg_error" style="visibility: hidden;"></div>
     <ul>
         <li>
-            <label for="datetimes">Date</label>
-            <input type="text" name="datetimes"/>
+            <label for="device">Device</label>
+            <input type="search" name="device" id="device" list="device-list" />
             <span>Trigger date interval</span>
-        </li>
-        <li>
-            <label for="privkey">Private key</label>
-            <input type="file" name="privkey" accept=".priv,.pem">
-            <span>Private key, not transferred</span>
-        </li>
-        <li>
-            <label for="pwd">Password</label>
-            <input type="password" name="pwd"/>
-            <span>Private key password, not transferred</span>
+            <datalist id="device-list">
+            {% for device in devices %}
+                <option value="{{device.id}}"></option>
+            {% endfor %}
+            </datalist>
         </li>
         <li>
             <input type="button" value="Fetch" onclick="fetch()">
-            <input type="button" id="download_all_button" disabled value="Download All" onclick="download_all()">
+            <input type="button" id="download_all_button" disabled value="Download All" name="Update">
         </li>
-        <li>
-            <label for="station-frame">Stations</label>
-            <div id="station-frame">
-                <div id="stations" class="hot handsontable htColumnHeaders"></div>
-            </div>
-            <span>Available samples</span>
-        </li>
-
     </ul>
 </div>
-<script type="text/javascript" src="static/read_trigger.js" defer></script>
 </body>
 </html>

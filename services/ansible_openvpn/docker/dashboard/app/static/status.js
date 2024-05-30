@@ -121,6 +121,7 @@ toplinkbar.onAdd = function (lmap) {
     const links = [
       { text: "Map", url: "/", target : "_self"},
       { text: "Audio records", url: "/recordings", target : "_self" },
+      { text: "Alert agenda", url: "/agenda", target : "_self" },
       { text: "Backup data", url: "https://nsraw.noise-planet.org" , target : "_blank"}
     ];
     var divhtml = "<ul class=\"ul_top_menu\">";
