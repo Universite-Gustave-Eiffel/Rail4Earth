@@ -171,6 +171,8 @@ class TriggerProcessor:
     """
     Service listening to zero_record and trigger sound recording according to pre-defined noise events
     """
+    socket_out_recording = None
+    socket_out_recognition = None
 
     def __init__(self, config):
         self.frame_time = 0
@@ -188,7 +190,7 @@ class TriggerProcessor:
         # Cache samples for configured length before trigger
         self.samples_stack = collections.deque()
         self.socket = None
-        self.socket_out = None
+        self.socket_out_recording = None
         self.yamnet_config = Params()
         tflite_path = self.config.yamnet_weights
         if self.config.verbose:
@@ -229,8 +231,10 @@ class TriggerProcessor:
         self.socket = context.socket(zmq.SUB)
         self.socket.connect(self.config.input_address)
         self.socket.subscribe("")
-        self.socket_out = context.socket(zmq.PUB)
-        self.socket_out.bind(self.config.output_address)
+        self.socket_out_recording = context.socket(zmq.PUB)
+        self.socket_out_recording.bind(self.config.output_address_recording)
+        self.socket_out_recognition = context.socket(zmq.PUB)
+        self.socket_out_recognition.bind(self.config.output_address_recognition)
 
     def process_tags(self, samples):
         # check for sound recognition tags
@@ -397,6 +401,7 @@ class TriggerProcessor:
                         if self.config.verbose:
                             print(" Remaining triggers for today %d" %
                                   self.remaining_triggers)
+                    self.socket_out_recognition.send_json(document)
                     if self.config.total_length > 0 and (
                             self.remaining_triggers > 0 or
                             self.remaining_triggers == -1):
@@ -404,9 +409,8 @@ class TriggerProcessor:
                         status = "record"
                         continue
                     else:
-                        # no audio record, just send the recognized tags
+                        # no audio record
                         status = "wait_trigger"
-                        self.socket_out.send_json(document)
                         continue
                 self.processing_time = 0  # yamnet window has been rejected
             elif status == "record":
@@ -487,7 +491,7 @@ class TriggerProcessor:
                         document["encrypted_audio"] = audio_data_encrypt
                         document["encrypted_audio_length"] = len(audio_data_encrypt)
                         del audio_data_encrypt
-                    self.socket_out.send_json(document)
+                    self.socket_out_recording.send_json(document)
                     document = {}
                     self.samples_stack.clear()
                     status = "wait_trigger"
@@ -526,8 +530,12 @@ if __name__ == "__main__":
                         default="~/.ssh/id_rsa.pub")
     parser.add_argument("--input_address", help="Address for zero_record samples",
                         default="tcp://127.0.0.1:10001")
-    parser.add_argument("--output_address", help="Address for publishing JSON of sound recognition",
+    parser.add_argument("--output_address_recordings",
+                        help="Address for publishing JSON of sound recordings",
                         default="tcp://*:10002")
+    parser.add_argument("--output_address_recognition",
+                        help="Address for publishing JSON of sound recognition",
+                        default="tcp://*:10003")
     required_actions.append(parser.add_argument("--yamnet_class_map",
                                                 help="Yamnet CSV path yamnet_class_threshold_map.csv",
                                                 type=str))

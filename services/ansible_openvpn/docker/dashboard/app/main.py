@@ -27,6 +27,9 @@
 #  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 #  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+import logging
+
+import elasticsearch
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -44,14 +47,15 @@ app.mount("/fonts", StaticFiles(directory="app/fonts"), name="fonts")
 
 templates = Jinja2Templates(directory="app/templates")
 
-if not os.path.exists("app/config.json"):
+if not os.path.exists("certs/api.json"):
     raise Exception("Configuration file not found " +
-                    os.path.abspath("app/config.json"))
-configuration = json.load(open("app/config.json", "r"))
+                    os.path.abspath("certs/api.json"))
+configuration = json.load(open("certs/api.json", "r"))
 
 client = Elasticsearch(
     configuration.get("url", "https://es01:9200"),
     api_key=(configuration["id"], configuration["api_key"]),
+    ca_certs="certs/ca/ca.crt",
     verify_certs=configuration.get("verify_certs", True), request_timeout=60
 )
 
@@ -128,6 +132,15 @@ async def get_sensor_position(request: Request):
 async def recordings(request: Request):
     return templates.TemplateResponse("recordings.html",
                                       context={"request": request})
+
+
+@app.get("/api/agenda/{sensor_id}")
+async def get_sensor_last_record(request: Request, sensor_id: str):
+    try:
+        resp = client.get(index="sensor_agenda", id=sensor_id)
+        return resp["_source"]
+    except elasticsearch.NotFoundError as e:
+        return {}
 
 
 @app.get('/get-samples/{document_id}')

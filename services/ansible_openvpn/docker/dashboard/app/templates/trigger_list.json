@@ -23,7 +23,7 @@
         {
           "range": {
             "encrypted_audio_length" : {
-              "gte": 0
+              "gt": 0
             }
           }
         }

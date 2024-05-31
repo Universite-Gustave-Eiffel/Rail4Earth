@@ -1,4 +1,6 @@
 import asyncio
+import os.path
+from threading import Thread
 from bleak.backends.characteristic import BleakGATTCharacteristic
 from bleak import BleakClient, BleakError
 from bleak import BleakScanner
@@ -8,13 +10,32 @@ import argparse
 import time
 import io
 import json
+import datetime
+import signal
+from threading import Event
+from urllib.error import HTTPError
+from urllib.request import urlopen
+import fcntl
+import socket
+import struct
 
 UART_SERVICE_UUID = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
 UART_RX_CHAR_UUID = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
 UART_TX_CHAR_UUID = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
 SERVICE_MODE = "0000183b-0000-1000-8000-00805f9b34fb"
 SERVICE_ANSWER_SIZE = "0000180a-0000-1000-8000-00805f9b34fb"
+FILE_URI = "file://"
 logger = logging.getLogger(__name__)
+
+
+def get_hw_address(interface_name):
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        info = fcntl.ioctl(s.fileno(), 0x8927, struct.pack(
+            '256s', bytes(interface_name, 'utf-8')[:15]))
+        return ''.join('%02x' % b for b in info[18:24])
+    except OSError:
+        return ""
 
 
 def uart_data_received(_: BleakGATTCharacteristic, data: bytearray):
@@ -26,18 +47,96 @@ def slice_bytes(data: bytes, n: int):
     return (data[i:i + n] for i in range(0, len(data), n))
 
 
+def time_to_iso(seconds_since_epoch):
+    dt = datetime.datetime.utcfromtimestamp(seconds_since_epoch)
+    # Convert the datetime object to an ISO-formatted string
+    return dt.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+
+class AgendaUpdateDaemon:
+    def __init__(self, agenda_query_url: str, t: Event, agenda):
+        self.agenda_query_url = agenda_query_url
+        self.t = t
+        self.agenda = agenda
+
+    def run(self):
+        while not self.t.is_set():
+            if self.agenda_query_url.startswith(FILE_URI):
+                filepath = self.agenda_query_url[len(FILE_URI):]
+                if os.path.exists(filepath):
+                    with open(filepath, "r") as fp:
+                        self.agenda["days"] = json.load(fp)
+                        self.agenda["last_fetch"] = time.time()
+            else:
+                try:
+                    with urlopen(self.agenda_query_url) as response:
+                        if response.status == 200:
+                            try:
+                                self.agenda["days"] = json.loads(response.read().decode())
+                                self.agenda["last_fetch"] = time.time()
+                            except json.JSONDecodeError as e:
+                                logger.error("Error while decoding api response", e)
+                except HTTPError as e:
+                    logger.error("Error while fetching agenda", e)
+            self.t.wait(1300)
+
+
+class BleTrackingDaemon:
+    known_devices = {}
+    known_devices_last_report = {}
+    reports = {}
+    running = True
+
+    def __init__(self, socket_out_lost, t: Event):
+        self.socket_out_lost = socket_out_lost
+        self.t = t
+
+    def on_found_device(self, device):
+        self.known_devices[device.name] = time.time()
+
+    def stop(self, sig, frame):
+        logger.warning("Interrupted by %d, shutting down" % sig)
+        self.running = False
+        for k, v in self.known_devices.items():
+            self.reports[k]["lastSeen"] = time_to_iso(v)
+            self.socket_out_lost.send_json(self.reports[k])
+        # stop main process
+        self.t.set()
+
+    def run(self):
+        self.t.wait(2)
+        while self.running:
+            # look for missing devices
+            for k, v in self.known_devices_last_report.items():
+                if k not in self.known_devices.keys():
+                    self.reports[k]["lastSeen"] = time_to_iso(v)
+                    self.socket_out_lost.send_json(self.reports[k])
+                    print("Device %s lost since %s" % (k, time_to_iso(v)))
+            # look for new devices
+            for k, v in self.known_devices.items():
+                if k not in self.known_devices_last_report.keys():
+                    print("New Device %s since %s" % (k, time_to_iso(v)))
+                    self.reports[k] = {"firstSeen": time_to_iso(v), "device": k}
+            self.known_devices_last_report = self.known_devices
+            self.known_devices = {}
+            self.t.wait(300)
+        print("Exiting daemon")
+
+
 class ScanResult:
     device = None
     advertising_data = None
     received_data = io.BytesIO()
     received_data_time = time.time()
 
-    def __init__(self, stop_event):
+    def __init__(self, stop_event, ble_tracking: BleTrackingDaemon):
         self.stop_event = stop_event
+        self.ble_tracking = ble_tracking
 
     def callback(self, d, advertising_data):
         if d.name and "Pixl.js" in d.name and SERVICE_MODE in advertising_data.service_data:
             self.device = d
+            self.ble_tracking.on_found_device(d)
             self.advertising_data = advertising_data
             self.stop_event.set()
 
@@ -46,27 +145,62 @@ class ScanResult:
         self.received_data_time = time.time()
 
 
-def process_message(socket, config):
+def process_message(socket, config, agenda):
     event = socket.poll(timeout=config.zmq_timeout)
     if event == 0:
         return ""
     data = socket.recv_json()
-    scores = data["scores"]
-    if len(scores) > 0:
-        return b"\x03\x10onTrainCrossing(false);\n"
+    if data:
+        today = datetime.date.today().isoformat()
+        today_datetime = datetime.datetime.today()
+        if today in agenda["days"]:
+            today_agenda = agenda["days"][today]
+            now = time.time()
+            available = False
+            for time_range in today_agenda["time_ranges"]:
+                start_time = datetime.datetime.fromisoformat("%sT%s" % (today, time_range["start"]))
+                end_time = datetime.datetime.fromisoformat("%sT%s" % (today, time_range["end"]))
+                if start_time <= today_datetime <= end_time:
+                    available = True
+                    break
+            if available:
+                return (b"\x03\x10if(Math.abs(getTime()-%f) > 300) {"
+                        b" setTime(%f);E.setTimeZone(%d);"
+                        b"}"
+                        b"onTrainCrossing(false);\n") % (now, now, -time.altzone // 3600)
     return ""
 
 
 async def main(config):
+    # agenda example
+    agenda = {
+        "days": {},
+        "last_fetch": 0}
+    t = Event()
     context = zmq.Context()
     socket = context.socket(zmq.SUB)
     socket.connect(config.input_address)
     socket.subscribe("")
     socket_out = context.socket(zmq.PUB)
     socket_out.bind(config.output_address)
-    while True:
+    socket_out_lost = context.socket(zmq.PUB)
+    socket_out_lost.bind(config.output_address_lost)
+    ble_tracking = BleTrackingDaemon(socket_out_lost, t)
+    # json file can be local file ex: "file:///tmp/agenda.json"
+    agenda_url = "https://dashboard.raw.noise-planet.org/api/agenda/"+get_hw_address("eth0")
+    agenda_update = AgendaUpdateDaemon(agenda_url, t, agenda)
+    # will kill when program end
+    ble_tracking_thread = Thread(target=ble_tracking.run, daemon=True)
+    ble_tracking_thread.start()
+    agenda_update_thread = Thread(target=agenda_update.run, daemon=True)
+    agenda_update_thread.start()
+    signal.signal(signal.SIGTERM,
+                  lambda sig, frame: ble_tracking.stop(sig, frame))
+    signal.signal(signal.SIGINT,
+                  lambda sig, frame: ble_tracking.stop(sig, frame))
+    while not t.is_set():
         stop_event = asyncio.Event()
-        scan_result = ScanResult(stop_event)
+        scan_result = ScanResult(stop_event, ble_tracking)
         async with BleakScanner(scan_result.callback) as scanner:
             await stop_event.wait()
         mode = scan_result.advertising_data.service_data[SERVICE_MODE].decode("ascii")
@@ -81,7 +215,7 @@ async def main(config):
                     now = time.time()
                     c = (
                             b"\x03\x10if(Math.abs(getTime()-%f) > 300) { setTime(%f);E.setTimeZone(%d);}lastSeen=Date();rssi=%f;\n") % (
-                        now, now, -time.altzone // 3600, scan_result.advertising_data.rssi)
+                            now, now, -time.altzone // 3600, scan_result.advertising_data.rssi)
                     for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
                         await client.write_gatt_char(rx_char, buffer, False)
             except (BleakError, asyncio.TimeoutError) as e:
@@ -121,7 +255,7 @@ async def main(config):
             except (BleakError, asyncio.TimeoutError) as e:
                 logger.error("Send data error", e)
         else:
-            c = process_message(socket, config)
+            c = process_message(socket, config, agenda)
             tries = 0
             while c:
                 try:
@@ -147,13 +281,14 @@ if __name__ == "__main__":
                     ' pixl.js device',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--input_address", help="Address for zero_trigger tags",
-                        default="tcp://127.0.0.1:10002")
+                        default="tcp://127.0.0.1:10003")
     parser.add_argument("--zmq_timeout", help="Wait for zmq message for x milliseconds",
                         default=1000, type=int)
     parser.add_argument("--max_try", help="Maximum sending data try",
                         default=10, type=int)
     parser.add_argument("--output_address", help="Address for publishing JSON of pixl.js answers",
                         default="tcp://*:10010")
-    args = parser.parse_args()
+    parser.add_argument("--output_address_lost", help="Address for publishing pixl.js lost event",
+                        default="tcp://*:10011")
     logging.basicConfig(level=logging.INFO)
-    asyncio.run(main(args))
+    asyncio.run(main(parser.parse_args()))
