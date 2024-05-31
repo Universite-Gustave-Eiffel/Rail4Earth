@@ -133,18 +133,30 @@ head -c32 /dev/urandom | base64
 
 # Create dynamic raspberry-pi ansible inventory using OpenVPN management console
 
-The following playbook will create a file in that will contain all RPI connected in OpenVPN:
+- Create project
+- Create empty key (for https)
+- Declare raspberry-pi ssh key
+- Declare https git repository (https://github.com/Universite-Gustave-Eiffel/Rail4Earth.git main)
+- Declare localhost inventory
+- Create empty environment
+- Declare the following playbook that will create a file in that will contain all RPI connected in OpenVPN:
 
 ```services/ansible_openvpn/playbooks/fetch_openvpn_hosts.yml```
 
-This playbook use the following environment variable to bet set in Environment in semaphore web gui:
+- Connect to dashboard and retrieve the automated created elastic search api key in /home/dashboard/certs/api.json
+This playbook use the following environment variable, it has to be set in environment in semaphore web gui:
 
-```
+```json
 { 
   "MANAGEMENT_OPENVPN_PORT": "5555",
-  "MANAGEMENT_OPENVPN_PASSWORD": "YOUR_OPENVPN_MANAGEMENT_CONSOLE_PASSWORD"
+  "MANAGEMENT_OPENVPN_PASSWORD": "YOUR_OPENVPN_MANAGEMENT_CONSOLE_PASSWORD",
+  "ELASTIC_SEARCH_API_KEY_ID": "id",
+  "ELASTIC_SEARCH_API_KEY": "api_key"
 }
 ```
+- Run the playbook and declare the following file inventory `/home/semaphore/hosts.json`
+
+
 
 # OpenVPN management
 
