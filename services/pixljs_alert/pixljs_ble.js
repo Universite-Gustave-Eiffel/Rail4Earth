@@ -1,4 +1,5 @@
 // force timezone to UTC+0200
+const CODE_VERSION=1;
 E.setTimeZone(2);
 const BUZZING_TIME = 60000; // buzzer time ms
 const RESET_NO_ANSWER = 60000;
@@ -21,7 +22,7 @@ Pixl.setLCDPower(false);
 var mode = 0; // 0 wait 1 install 2 answering question
 var rssi = -100;
 let lastSeen = Date(0);
-const MODE_SWITCH_MILLI = 4000;
+const MODE_SWITCH_MILLI = 2000;
 const TIMEOUT_RPI = 15000;
 var button_watch = [0, 0, 0, 0];
 var timeout_switch = 0;
@@ -72,19 +73,19 @@ function watchIdleButtons() {
     button_watch[0] = setWatch(onPressButtonInstallMode, BTN1, {
       repeat: true,
       edge: 'both',
-      debounce: 10
+      debounce: 100
     });
-    button_watch[1] = setWatch(onPressButtonTrainDemo, BTN2, {
+    button_watch[3] = setWatch(onPressButtonTrainDemo, BTN4, {
       repeat: true,
       edge: 'both',
-      debounce: 10
+      debounce: 100
     });
     button_watch[2] = setWatch(screenIdle, BTN3, {
       repeat: false,
       edge: 'falling',
       debounce: 10
     });
-    button_watch[3] = setWatch(screenIdle, BTN4, {
+    button_watch[1] = setWatch(screenIdle, BTN2, {
       repeat: false,
       edge: 'falling',
       debounce: 10
@@ -95,7 +96,8 @@ function watchIdleButtons() {
 function updateAdvertisement() {
   NRF.setAdvertising({
     0x183B: mode == 1 ? 'install' : 'normal',
-    0x180A: formStack.length
+    0x180A: formStack.length,
+    0x180B: CODE_VERSION
   }, {
     whenConnected: true
   }); //, interval: 1000
@@ -108,14 +110,14 @@ function switchStateInstall(newMode) {
     Pixl.setLCDPower(true);
     LED.write(1);
     disableButtons();
-    button_watch[0] = setWatch(switchStateInstall, BTN1, {
+    button_watch[0] = setWatch(e => {switchStateInstall(0);}, BTN1, {
       repeat: false,
       debounce: 10
-    },0);
+    });
   }
   installScreen();
   if (mode) {
-    setTimeout(switchStateInstall, 15 * 60000, false);
+    setTimeout(switchStateInstall, 15 * 60000, 0);
   } else {
     watchIdleButtons();
   }
@@ -191,7 +193,7 @@ function installScreen() {
     if (diff > TIMEOUT_RPI) {
       text = "No Rpi Connection";
     } else {
-      text = "Vu il y a " + parseInt(diff / 1000) + " secondes\nRSSI: " + rssi + " dB (" + rssiPowerHint() + ")"
+      text = "Vu il y a " + parseInt(diff / 1000) + " secondes\nRSSI: " + rssi + " dB (" + rssiPowerHint() + ")";
     }
     g.setFontAlign(0.5, 0.5);
     g.drawString(text, g.getWidth() / 2 , g.getHeight() / 2);
@@ -222,7 +224,7 @@ function onPressButtonInstallMode() {
 
 function onPressButtonTrainDemo() {
   print("press demo button");
-  let state = digitalRead(BTN2);
+  let state = digitalRead(BTN4);
   if (state) {
     timeout_switch = setTimeout(onTrainCrossing, MODE_SWITCH_MILLI, false);
   } else {
@@ -424,6 +426,7 @@ function screenQuestionA() {
   g.drawString("Non", g.getWidth(), g.getHeight());
   g.flip();
   disableButtons();
+  setTimeout(e => {
   button_watch[0] = setWatch(onClickSnooze, BTN1, {
     repeat: false,
     edge: 'rising',
@@ -447,11 +450,17 @@ function screenQuestionA() {
     edge: 'both',
     debounce: 10
   });
+  }, 500);
 }
 
 function screenIdle() {
   disableButtons();
   button_watch[0] = setWatch(onPressButtonInstallMode, BTN1, {
+    repeat: true,
+    edge: 'both',
+    debounce: 10
+  });
+  button_watch[3] = setWatch(onPressButtonTrainDemo, BTN4, {
     repeat: true,
     edge: 'both',
     debounce: 10
