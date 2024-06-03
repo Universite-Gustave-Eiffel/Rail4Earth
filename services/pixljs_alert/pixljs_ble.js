@@ -108,14 +108,14 @@ function switchStateInstall(newMode) {
     Pixl.setLCDPower(true);
     LED.write(1);
     disableButtons();
-    button_watch[0] = setWatch(switchStateInstall, BTN1, {
+    button_watch[0] = setWatch(e=>{switchStateInstall(0);}, BTN1, {
       repeat: false,
       debounce: 10
-    },0);
+    });
   }
   installScreen();
   if (mode) {
-    setTimeout(switchStateInstall, 15 * 60000, false);
+    setTimeout(e=>{switchStateInstall(0);}, 15 * 60000, false);
   } else {
     watchIdleButtons();
   }
@@ -191,7 +191,7 @@ function installScreen() {
     if (diff > TIMEOUT_RPI) {
       text = "No Rpi Connection";
     } else {
-      text = "Vu il y a " + parseInt(diff / 1000) + " secondes\nRSSI: " + rssi + " dB (" + rssiPowerHint() + ")"
+      text = "Vu il y a " + parseInt(diff / 1000) + " secondes\nRSSI: " + rssi + " dB (" + rssiPowerHint() + ")";
     }
     g.setFontAlign(0.5, 0.5);
     g.drawString(text, g.getWidth() / 2 , g.getHeight() / 2);
