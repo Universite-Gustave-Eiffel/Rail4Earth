@@ -1,15 +1,4 @@
 services:
-  mysql:
-    restart: unless-stopped
-    image: mysql:8.0
-    container_name: semaphore-mysql
-    volumes:
-      - semaphore-mysql:/var/lib/mysql
-    environment:
-      MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
-      MYSQL_DATABASE: semaphore
-      MYSQL_USER: semaphore
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
   openvpn:
     # https://github.com/kylemanna/docker-openvpn/blob/master/docs/docker-compose.md
     cap_add:
@@ -31,11 +20,8 @@ services:
       context: .
       dockerfile: semaphore/Dockerfile
     environment:
-      SEMAPHORE_DB_USER: semaphore
-      SEMAPHORE_DB_PASS: ${MYSQL_PASSWORD}
-      SEMAPHORE_DB_HOST: mysql # for postgres, change to: postgres
-      SEMAPHORE_DB_PORT: 3306 # change to 5432 for postgres
-      SEMAPHORE_DB_DIALECT: mysql
+      SEMAPHORE_DB_DIALECT: bolt
+      TZ: Europe/Paris
       SEMAPHORE_DB: semaphore
       SEMAPHORE_PLAYBOOK_PATH: /tmp/semaphore/
       SEMAPHORE_ADMIN_PASSWORD: ${SEMAPHORE_ADMIN_PASSWORD}
@@ -46,9 +32,9 @@ services:
       ANSIBLE_HOST_KEY_CHECKING: False # We are using OpenVPN, so it is ok, additionally RPI IP address are dynamic
     network_mode: "service:openvpn"
     volumes:
+      - semaphore-db:/var/lib/semaphore # database.boltdb location
       - semaphore-data:/home/semaphore/data/:z
     depends_on:
-      - mysql # for postgres, change to: postgres
       - openvpn
   setup:
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
@@ -189,7 +175,7 @@ services:
       - certs:/home/dashboard/certs
       - ./dashboard/app:/home/dashboard/app
 volumes:
-  semaphore-mysql:
+  semaphore-db:
     driver: local
   semaphore-data: # storage of raw sensor data
     driver: local
