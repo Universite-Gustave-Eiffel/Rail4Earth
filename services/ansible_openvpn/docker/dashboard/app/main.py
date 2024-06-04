@@ -145,7 +145,7 @@ async def recordings(request: Request):
 @app.get("/api/list-devices")
 async def get_openvpn_devices(request: Request):
     m = OpenVPNManagement()
-    m.connect("10.8.0.1", 5555, os.environ["OPENVPN_MANAGEMENT_PASSWORD"])
+    m.connect("openvpn", 5555, os.environ["OPENVPN_MANAGEMENT_PASSWORD"])
     return m.status()
 
 
