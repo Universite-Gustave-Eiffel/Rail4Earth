@@ -8,9 +8,6 @@
 - name: Fetch RPI list
   ansible.builtin.import_playbook: fetch_openvpn_hosts.yml
 
-- name: Refresh inventory to ensure new instances exist in inventory
-  ansible.builtin.meta: refresh_inventory
-  
 - name: Fetch RPI data using rsync
   ansible.builtin.import_playbook: fetch_rpi_data.yml
 
