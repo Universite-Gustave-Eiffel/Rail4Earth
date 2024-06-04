@@ -171,6 +171,7 @@ services:
       - '8000:80'
     environment:
       WATCHFILES_FORCE_POLLING: true
+      OPENVPN_MANAGEMENT_PASSWORD: ${OPENVPN_MANAGEMENT_PASSWORD}
     volumes:
       - certs:/home/dashboard/certs
       - ./dashboard/app:/home/dashboard/app
