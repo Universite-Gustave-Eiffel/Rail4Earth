@@ -134,7 +134,7 @@ class ScanResult:
         self.ble_tracking = ble_tracking
 
     def callback(self, d, advertising_data):
-        if d.name and "Pixl.js" in d.name and SERVICE_MODE in advertising_data.service_data:
+        if d.name and "Pixl." in d.name and SERVICE_MODE in advertising_data.service_data:
             self.device = d
             self.ble_tracking.on_found_device(d)
             self.advertising_data = advertising_data
