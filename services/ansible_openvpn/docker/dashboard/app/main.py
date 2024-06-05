@@ -38,6 +38,7 @@ import json
 import os
 from elasticsearch import Elasticsearch
 import base64
+from .openvpn_management import OpenVPNManagement
 
 app = FastAPI()
 
@@ -132,6 +133,20 @@ async def get_sensor_position(request: Request):
 async def recordings(request: Request):
     return templates.TemplateResponse("recordings.html",
                                       context={"request": request})
+
+
+
+@app.get('/devices', response_class=HTMLResponse)
+async def recordings(request: Request):
+    return templates.TemplateResponse("devices.html",
+                                      context={"request": request})
+
+
+@app.get("/api/list-devices")
+async def get_openvpn_devices(request: Request):
+    m = OpenVPNManagement()
+    m.connect("openvpn", 5555, os.environ["OPENVPN_MANAGEMENT_PASSWORD"])
+    return m.status()
 
 
 @app.get("/api/agenda/{sensor_id}")

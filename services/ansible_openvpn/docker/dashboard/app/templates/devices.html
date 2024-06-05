@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Connected devices</title>
+    <link rel="stylesheet" type="text/css" href="static/status.css"/>
+    <script type="text/javascript" src="static/jquery.min.js"></script>
+    <link type="text/css" href="static/handsontable.full.css" rel="stylesheet" media="screen">
+    <link rel="stylesheet" type="text/css" href="static/forms.css"/>
+    <script type="text/javascript" src="static/handsontable.full.js"></script>
+</head>
+<body>
+<div class="info top_menu">
+    <ul class="ul_top_menu">
+        <li class="li_top_menu"><a href="/" target="_self">Map</a></li>
+        <li class="li_top_menu"><a href="/recordings" target="_self" style="outline: none;">Audio records</a></li>
+        <li class="li_top_menu"><a href="/devices" target="_self" style="outline: none;">Connected devices</a></li>
+        <li class="li_top_menu"><a href="https://nsraw.noise-planet.org" target="_blank">Backup data</a></li>
+    </ul>
+</div>
+<div class="form-style-7">
+    <h1>Connected devices</h1>
+    <ul>
+        <li>
+            <input type="button" value="Refresh" onclick="fetch()">
+        </li>
+        <li>
+            <div id="devices" class="hot handsontable htColumnHeaders"></div>
+        </li>
+    </ul>
+
+</div>
+<script type="text/javascript" src="static/read_devices.js" defer></script>
+</body>
+</html>
