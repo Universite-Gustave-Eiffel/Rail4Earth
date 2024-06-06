@@ -6,6 +6,14 @@
     source2: '/home/pi/noisesensor/outsd/'
     destination: '/home/semaphore/data/to_process/'
   tasks:
+  - name: get current RX
+    shell: ifconfig | grep tun0 -A 6 | tail -n 1 | awk '{split($2,a,":"); print a[2]}'
+    register: rx_bytes
+    delegate_to: localhost
+  - name: get current TX
+    shell: ifconfig | grep tun0 -A 6 | tail -n 1 | awk '{split($6,a,":"); print a[2]}'
+    register: tx_bytes
+    delegate_to: localhost
   - name: Append year and week to destination folder
     shell: date +%Y_%W
     register: year_week
@@ -28,6 +36,7 @@
       mode: 'pull'
       src: '{{ source }}'
       dest: '{{ destination }}{{ year_week.stdout }}/{{ rpi_mac.stdout }}'
+      rsync_timeout: 10
       rsync_opts:
         - "--remove-source-files"
         - "--exclude='*.tmp'"
@@ -43,3 +52,14 @@
       rsync_opts:
         - "--remove-source-files"
         - "--exclude='*.tmp'"
+  - name: get current RX
+    shell: ifconfig | grep tun0 -A 6 | tail -n 1 | awk '{split($2,a,":"); print a[2]}'
+    register: rx_bytes_end
+    delegate_to: localhost
+  - name: get current TX
+    shell: ifconfig | grep tun0 -A 6 | tail -n 1 | awk '{split($6,a,":"); print a[2]}'
+    register: tx_bytes_end
+    delegate_to: localhost
+  - name: Print used bandwidth
+    debug:
+      msg: "Ansible task consumed data:  RX {{ ((rx_bytes_end.stdout | int)-(rx_bytes.stdout | int)) | human_readable }} TX {{ ((tx_bytes_end.stdout | int)-(tx_bytes.stdout | int)) | human_readable }} "
