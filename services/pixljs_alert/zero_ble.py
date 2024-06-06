@@ -92,7 +92,7 @@ class BleTrackingDaemon:
         self.t = t
 
     def on_found_device(self, device):
-        self.known_devices[device.name] = time.time()
+        self.known_devices[device.address] = time.time()
 
     def stop(self, sig, frame):
         logger.warning("Interrupted by %d, shutting down" % sig)
@@ -241,7 +241,7 @@ async def main(config):
                             continue
                         json_string = json_string[json_string.find("{"):json_string.rfind("}") + 1]
                         json_data = json.loads(json_string)
-                        json_data["device"] = scan_result.device.name
+                        json_data["device"] = scan_result.device.address
                         # remove item from pixl.js device
                         for buffer in slice_bytes(
                                 b"\x03\x10formStack.pop(0);updateAdvertisement();\n",
