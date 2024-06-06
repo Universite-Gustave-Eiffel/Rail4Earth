@@ -7,6 +7,7 @@
         dest: /home/pi/noisesensor/
         single_branch: yes
         version: main
+      register: gitclone
     - name: Stop noisesensor services
       become: true
       ansible.builtin.systemd:
@@ -20,6 +21,7 @@
         - zerostorage.service
         - zerostorage_indicators.service
         - zerotrigger.service
+      when: gitclone.changed
     - name: Start noisesensor services
       become: true
       ansible.builtin.systemd:
@@ -35,3 +37,4 @@
         - zeroindicators.service
         - zerotrigger.service
         - zeroble.service
+      when: gitclone.changed
