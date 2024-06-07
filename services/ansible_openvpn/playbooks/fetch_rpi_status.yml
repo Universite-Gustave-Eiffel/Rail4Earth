@@ -4,7 +4,7 @@
   connection: ssh
   tasks:
     - name: Fetch hostname
-      ansible.builtin.command: cat /etc/hosts | grep 127.0.1.1 | awk '{print $2}'
+      ansible.builtin.shell: cat /etc/hosts | grep 127.0.1.1 | awk '{print $2}'
       register: rpi_host
     - name: fetch RPI eth0 mac address
       ansible.builtin.shell: /usr/sbin/ifconfig eth0 2>/dev/null|awk '/ether/ {print $2}'
