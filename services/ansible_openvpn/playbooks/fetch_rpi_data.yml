@@ -7,11 +7,11 @@
     destination: '/home/semaphore/data/to_process/'
   tasks:
   - name: get current RX
-    shell: ifconfig | grep tun0 -A 6 | tail -n 1 | awk '{split($2,a,":"); print a[2]}'
+    shell: ifconfig -s tun0 | tail -n 1 | awk '{print $3}'
     register: rx_bytes
     delegate_to: localhost
   - name: get current TX
-    shell: ifconfig | grep tun0 -A 6 | tail -n 1 | awk '{split($6,a,":"); print a[2]}'
+    shell: ifconfig -s tun0 | tail -n 1 | awk '{print $7}'
     register: tx_bytes
     delegate_to: localhost
   - name: Print used bandwidth
@@ -57,11 +57,11 @@
         - "--remove-source-files"
         - "--exclude='*.tmp'"
   - name: get current RX
-    shell: ifconfig | grep tun0 -A 6 | tail -n 1 | awk '{split($2,a,":"); print a[2]}'
+    shell: ifconfig -s tun0 | tail -n 1 | awk '{print $3}'
     register: rx_bytes_end
     delegate_to: localhost
   - name: get current TX
-    shell: ifconfig | grep tun0 -A 6 | tail -n 1 | awk '{split($6,a,":"); print a[2]}'
+    shell: ifconfig -s tun0 | tail -n 1 | awk '{print $7}'
     register: tx_bytes_end
     delegate_to: localhost
   - name: Print used bandwidth
