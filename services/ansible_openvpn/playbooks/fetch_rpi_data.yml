@@ -7,17 +7,11 @@
     destination: '/home/semaphore/data/to_process/'
   tasks:
   - name: get current RX
-    shell: ifconfig tun0 | tail -n 2 | awk '{split($2,a,":"); print a[2]}'
+    shell: ifconfig tun0 | grep "RX packets" | awk '{print $5}'
     register: rx_bytes
-    delegate_to: localhost
   - name: get current TX
-    shell: ifconfig tun0 | tail -n 2 | awk '{split($6,a,":"); print a[2]}'
+    shell: ifconfig tun0 | grep "TX packets" | awk '{print $5}'
     register: tx_bytes
-    delegate_to: localhost
-  - name: Print used bandwidth
-    debug:
-      msg: "Before processing:  RX {{ rx_bytes.stdout }} TX {{ tx_bytes.stdout }} "
-    delegate_to: localhost
   - name: Append year and week to destination folder
     shell: date +%Y_%W
     register: year_week
@@ -56,15 +50,12 @@
       rsync_opts:
         - "--remove-source-files"
         - "--exclude='*.tmp'"
-  - name: get current RX
-    shell: ifconfig tun0 | tail -n 2 | awk '{split($2,a,":"); print a[2]}'
+  - name: get new RX
+    shell: ifconfig tun0 | grep "RX packets" | awk '{print $5}'
     register: rx_bytes_end
-    delegate_to: localhost
-  - name: get current TX
-    shell: ifconfig tun0 | tail -n 2 | awk '{split($6,a,":"); print a[2]}'
+  - name: get new TX
+    shell: ifconfig tun0 | grep "TX packets" | awk '{print $5}'
     register: tx_bytes_end
-    delegate_to: localhost
   - name: Print used bandwidth
     debug:
       msg: "Ansible task consumed data:  RX {{ ((rx_bytes_end.stdout | int)-(rx_bytes.stdout | int)) | human_readable }} TX {{ ((tx_bytes_end.stdout | int)-(tx_bytes.stdout | int)) | human_readable }} "
-    delegate_to: localhost
