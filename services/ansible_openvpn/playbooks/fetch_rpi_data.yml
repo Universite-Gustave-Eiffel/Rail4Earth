@@ -38,6 +38,8 @@
       rsync_opts:
         - "--remove-source-files"
         - "--exclude='*.tmp'"
+        - "--stats"
+    register: rsync_stats
   - name: Creates temp directory
     ansible.builtin.file:
       path: '{{ source2 }}'
@@ -58,4 +60,4 @@
     register: tx_bytes_end
   - name: Print used bandwidth
     debug:
-      msg: "Ansible task consumed data: {{ rx_bytes_end.stdout }} RX {{ ((rx_bytes_end.stdout | int)-(rx_bytes.stdout | int)) | human_readable }} TX {{ ((tx_bytes_end.stdout | int)-(tx_bytes.stdout | int)) | human_readable }} "
+      msg: "Ansible task consumed data: RX {{ ((rx_bytes_end.stdout | int)-(rx_bytes.stdout | int)) | human_readable }} TX {{ ((tx_bytes_end.stdout | int)-(tx_bytes.stdout | int)) | human_readable }}\n{{ rsync_stats.stdout }} "
