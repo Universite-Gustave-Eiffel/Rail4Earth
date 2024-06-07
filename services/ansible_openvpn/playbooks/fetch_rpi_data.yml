@@ -7,10 +7,10 @@
     destination: '/home/semaphore/data/to_process/'
   tasks:
   - name: get current RX
-    shell: ifconfig tun0 | grep "RX packets" | awk '{print $5}'
+    shell: /usr/sbin/ifconfig tun0 | grep "RX packets" | awk '{print $5}'
     register: rx_bytes
   - name: get current TX
-    shell: ifconfig tun0 | grep "TX packets" | awk '{print $5}'
+    shell: /usr/sbin/ifconfig tun0 | grep "TX packets" | awk '{print $5}'
     register: tx_bytes
   - name: Append year and week to destination folder
     shell: date +%Y_%W
@@ -51,10 +51,10 @@
         - "--remove-source-files"
         - "--exclude='*.tmp'"
   - name: get new RX
-    shell: ifconfig tun0 | grep "RX packets" | awk '{print $5}'
+    shell: /usr/sbin/ifconfig tun0 | grep "RX packets" | awk '{print $5}'
     register: rx_bytes_end
   - name: get new TX
-    shell: ifconfig tun0 | grep "TX packets" | awk '{print $5}'
+    shell: /usr/sbin/ifconfig tun0 | grep "TX packets" | awk '{print $5}'
     register: tx_bytes_end
   - name: Print used bandwidth
     debug:
