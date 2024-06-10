@@ -8,11 +8,11 @@
         single_branch: yes
         version: main
       register: gitclone
-    - name: Stop noisesensor services
+    - name: Restart noisesensor services
       become: true
       ansible.builtin.systemd:
         name: "{{ item }}"
-        state: stopped
+        state: restarted
       with_items:
         - zeroble.service
         - zerogps.service
@@ -21,20 +21,4 @@
         - zerostorage.service
         - zerostorage_indicators.service
         - zerotrigger.service
-      when: gitclone.changed
-    - name: Start noisesensor services
-      become: true
-      ansible.builtin.systemd:
-        name: "{{ item }}"
-        daemon_reload: true
-        enabled: true
-        state: started
-      with_items:
-        - zerogps.service
-        - zerostorage.service
-        - zerostorage_indicators.service
-        - zerorecord.service
-        - zeroindicators.service
-        - zerotrigger.service
-        - zeroble.service
       when: gitclone.changed
