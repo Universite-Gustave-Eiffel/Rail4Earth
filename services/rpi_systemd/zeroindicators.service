@@ -4,7 +4,7 @@ Requires=zerorecord.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3.9 -u /home/pi/noisesensor/services/zero_indicators.py -c services/rpi_systemd/zeroindicators_config.json -w 0.125 -s 80
+ExecStart=/usr/bin/python3.9 -u /home/pi/noisesensor/services/zero_indicators.py -c services/rpi_systemd/zeroindicators_config.json -w 0.125 -s 80 --data_file /home/pi/zeroindicators.json
 WorkingDirectory=/home/pi/noisesensor/
 Restart=always
 RestartSec=5s
