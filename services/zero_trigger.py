@@ -386,37 +386,37 @@ class TriggerProcessor:
         @param document: dict
         @return: bool
         """
-        trigger_threshold = []
-        if len(self.config.trigger_threshold) == 0:
+        trigger_thresholds = []
+        if len(self.config.trigger_thresholds) == 0:
             if self.config.verbose:
                 print("WARNING : Trigger threshold is empty, no trigger will ever be sent")
             return False
-        elif len(self.config.trigger_threshold) == 1:
-            trigger_threshold = [self.config.trigger_threshold[0]] * len(self.config.trigger_tag)
-        elif len(self.config.trigger_threshold) != len(self.config.trigger_tag):
+        elif len(self.config.trigger_thresholds) == 1:
+            trigger_thresholds = [self.config.trigger_thresholds[0]] * len(self.config.trigger_tags)
+        elif len(self.config.trigger_thresholds) != len(self.config.trigger_tags):
             if self.config.verbose:
                 print("WARNING : Trigger threshold must be the same length as trigger tags, using the first value for all tags")
-            trigger_threshold = [self.config.trigger_threshold[0]] * len(self.config.trigger_tag)
+            trigger_thresholds = [self.config.trigger_thresholds[0]] * len(self.config.trigger_tags)
         else:
-            trigger_threshold = self.config.trigger_threshold
+            trigger_thresholds = self.config.trigger_thresholds
 
-        order_threshold = []
-        if len(self.config.order_threshold) == 0:
-            order_threshold = [521] * len(self.config.trigger_tag)
-        elif len(self.config.order_threshold) == 1:
-            order_threshold = [self.config.order_threshold[0]] * len(self.config.trigger_tag)
-        elif len(self.config.order_threshold) != len(self.config.trigger_tag):
+        order_thresholds = []
+        if len(self.config.order_thresholds) == 0:
+            order_thresholds = [521] * len(self.config.trigger_tags)
+        elif len(self.config.order_thresholds) == 1:
+            order_thresholds = [self.config.order_thresholds[0]] * len(self.config.trigger_tags)
+        elif len(self.config.order_thresholds) != len(self.config.trigger_tags):
             if self.config.verbose:
                 print("WARNING : Order threshold must be the same length as trigger tags, using the first value for all tags")
-            order_threshold = [self.config.order_threshold[0]] * len(self.config.trigger_tag)
+            order_thresholds = [self.config.order_thresholds[0]] * len(self.config.trigger_tags)
         else:
-            order_threshold = self.config.order_threshold
+            order_thresholds = self.config.order_thresholds
 
-        for i, tag in enumerate(self.config.trigger_tag):
+        for i, tag in enumerate(self.config.trigger_tags):
             score = document["scores"][tag]
             order = document["orders"][tag]
 
-            if order <= order_threshold[i] and score >= trigger_threshold[i]:
+            if order <= order_thresholds[i] and score >= trigger_thresholds[i]:
                 return True
 
         return False
@@ -428,29 +428,29 @@ class TriggerProcessor:
         @return: bool
         """
 
-        trigger_ban_threshold = []
-        if len(self.config.trigger_ban_threshold) == 0:
+        ban_thresholds = []
+        if len(self.config.ban_thresholds) == 0:
             if self.config.verbose:
                 print("WARNING : Trigger ban threshold is empty, using default yamnet values")
-            for banned_tag in self.config.trigger_ban:
+            for banned_tag in self.config.ban_tags:
                 banned_tag_index = self.yamnet_classes[0].index(banned_tag)
                 banned_tag_threshold = self.yamnet_classes[1][banned_tag_index]
                 if self.config.verbose:
                     print("For tag %s (index %d) using threshold %f" % (banned_tag, banned_tag_index, banned_tag_threshold))
-                trigger_ban_threshold.append(banned_tag_threshold)
-        elif len(self.config.trigger_ban_threshold) == 1:
-            trigger_ban_threshold = [self.config.trigger_ban_threshold[0]] * len(self.config.trigger_ban)
-        elif len(self.config.trigger_ban_threshold) != len(self.config.trigger_ban):
+                ban_thresholds.append(banned_tag_threshold)
+        elif len(self.config.ban_thresholds) == 1:
+            ban_thresholds = [self.config.ban_thresholds[0]] * len(self.config.ban_tags)
+        elif len(self.config.ban_thresholds) != len(self.config.ban_tags):
             if self.config.verbose:
                 print("WARNING : Trigger ban threshold must be the same length as trigger tags, using the first value for all tags")
-            trigger_ban_threshold = [self.config.trigger_ban_threshold[0]] * len(self.config.trigger_ban)
+            ban_thresholds = [self.config.ban_thresholds[0]] * len(self.config.ban_tags)
         else:
-            trigger_ban_threshold = self.config.trigger_ban_threshold
+            ban_thresholds = self.config.ban_thresholds
 
-        for i, banned_tag in enumerate(self.config.trigger_ban):
+        for i, banned_tag in enumerate(self.config.ban_tags):
             score = document["scores"][banned_tag]
 
-            if score >= trigger_ban_threshold[i]:
+            if score >= ban_thresholds[i]:
                 return True
         return False
     
@@ -501,7 +501,7 @@ class TriggerProcessor:
                         print("Leq: %.2f dB > %.2f dB, so now try to recognize"
                               " sound source " % (leq, self.config.min_leq))
                     document = self.generate_yamnet_document_tags(
-                        self.yamnet_samples, self.config.trigger_tag, self.config.add_spectrogram)
+                        self.yamnet_samples, self.config.trigger_tags, self.config.add_spectrogram)
 
                     do_trigger = self.should_trigger(document)
                     if not do_trigger:
@@ -555,7 +555,7 @@ class TriggerProcessor:
                         # Compress audio samples
                         output = io.BytesIO()
                         keep_audio = True
-                        if len(self.config.trigger_ban) > 0:
+                        if len(self.config.ban_tags) > 0:
                             # There is banned sound source, analyze all the recorded audio to check
                             # if there is banned tags into it
                             samples = np.frombuffer(samples_trigger.getbuffer(), dtype=np.float32)
@@ -567,7 +567,7 @@ class TriggerProcessor:
                                                            filter=self.config.
                                                            resample_method)
                             ban_doc = self.generate_yamnet_document_tags(
-                                samples, self.config.trigger_ban, self.config.add_spectrogram)
+                                samples, self.config.ban_tags, self.config.add_spectrogram)
                             # Copy score time in order to match with recording length
                             # document["scores_time"] = doc["scores_time"]
                             del samples
@@ -621,10 +621,10 @@ if __name__ == "__main__":
     parser.add_argument("--trigger_count",
                         help="limit the number of embedding of audio by day (-1 unlimited)",
                         default=-1, type=int)
-    parser.add_argument("-b", "--trigger_ban",
+    parser.add_argument("-b", "--ban_tags",
                         help="Remove storage of audio if one of the following audio recognition tag is detected",
                         action='append', type=str, default=[])
-    parser.add_argument("-tbt", "--trigger_ban_threshold", 
+    parser.add_argument("-tbt", "--ban_thresholds", 
                         help="thresholds for the yamnet scores for the *ban* tags",
                         action='append', type=float, default=[])
     parser.add_argument("-c", "--configuration_file",
@@ -632,10 +632,10 @@ if __name__ == "__main__":
                         type=str)
     parser.add_argument("-t", "--trigger_tags", help="list of yamnet tags to watch",
                         action='append', type=str, default=[])
-    parser.add_argument("-tt", "--trigger_threshold",
+    parser.add_argument("-tt", "--trigger_thresholds",
                         help="thresholds for the yamnet scores. If any of them if above the threshold, the trigger is activated. If only one is provided, it will be used for all tags. If empty, no trigger will ever be sent.",
                         action='append', type=float, default=[])
-    parser.add_argument("-ot", "--order_threshold",
+    parser.add_argument("-ot", "--order_thresholds",
                         help="thresholds for the yamnet order. If the watched tags don't appear in the first X yamnet scores, dirscard the trigger. If only one is provided, it will be used for all tags. If empty, no order threshold is applied.",
                         action='append', type=int, default=[])
     parser.add_argument("--min_leq", help="minimum leq to trigger an event", default=30, type=float)

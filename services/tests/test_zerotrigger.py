@@ -56,12 +56,12 @@ class TestZeroTrigger(unittest.TestCase):
         
         config = {
             "trigger_count": 400,
-            "trigger_ban": ["Speech"],
-            "trigger_ban_threshold": [], # use default yamnet
+            "ban_tags": ["Speech"],
+            "ban_thresholds": [], # use default yamnet
             "configuration_file": "",
-            "trigger_tag": ["Train", "Rail transport", "Railroad car, train wagon"],
-            "trigger_threshold": [0.07],
-            "order_threshold": [8],
+            "trigger_tags": ["Train", "Rail transport", "Railroad car, train wagon"],
+            "trigger_thresholds": [0.07],
+            "order_thresholds": [8],
             "min_leq": 30.0,
             "total_length": 60.0,
             "cached_length": 30.0,
@@ -108,7 +108,7 @@ class TestZeroTrigger(unittest.TestCase):
                 yamnet_audio_cache.pop(0)
 
             if wait_blocks == 0:
-                document = trigger.generate_yamnet_document_tags(yamnet_audio, config.trigger_tag, config.add_spectrogram)
+                document = trigger.generate_yamnet_document_tags(yamnet_audio, config.trigger_tags, config.add_spectrogram)
             
                 do_trigger = trigger.should_trigger(document)
 
@@ -122,7 +122,7 @@ class TestZeroTrigger(unittest.TestCase):
                 wait_blocks -= 1
                 if wait_blocks == 0:
                     for yamnet_audio_cache_block in yamnet_audio_cache:
-                        ban_document = trigger.generate_yamnet_document_tags(yamnet_audio_cache_block, config.trigger_ban, config.add_spectrogram)
+                        ban_document = trigger.generate_yamnet_document_tags(yamnet_audio_cache_block, config.ban_tags, config.add_spectrogram)
                         if trigger.should_ban(ban_document):
                             print(ban_document)
                             bans.append(i * config.yamnet_window_time - config.cached_length)
