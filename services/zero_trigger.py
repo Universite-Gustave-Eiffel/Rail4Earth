@@ -302,8 +302,8 @@ class TriggerProcessor:
 
         for tag_i in tags_indexes:
             tag_name = self.yamnet_classes[0][tag_i]
-            tag_score = prediction[tag_i]
-            tag_order = 521 - np.max(np.where(ordered_scores==tag_i)[1])
+            tag_score = float(prediction[tag_i])
+            tag_order = int(521 - np.max(np.where(ordered_scores==tag_i)[1]))
             document_scores.update({tag_name: tag_score})
             document_orders.update({tag_name: tag_order})
 
