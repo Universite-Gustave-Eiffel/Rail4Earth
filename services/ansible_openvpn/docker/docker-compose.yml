@@ -34,6 +34,7 @@ services:
     volumes:
       - semaphore-db:/var/lib/semaphore # database.boltdb location
       - semaphore-data:/home/semaphore/data/:z
+      - ./openvpn-data/conf:/etc/openvpn #can create client certificate with playbook
     depends_on:
       - openvpn
   setup:
