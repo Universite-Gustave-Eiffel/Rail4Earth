@@ -1,12 +1,11 @@
 {
   "trigger_count": 400,
-  "trigger_ban": [
-    "Speech"
-  ],
+  "ban_tags": ["Speech"],
+  "ban_thresholds": [],
   "configuration_file": "",
-  "trigger_tag": ["Train", "Rail transport", "Railroad car, train wagon"],
-  "trigger_threshold": [0.1, 0.1, 0.1],
-  "order_threshold": [6, 6, 6],
+  "trigger_tags": ["Train", "Rail transport", "Railroad car, train wagon"],
+  "trigger_thresholds": [0.1, 0.1, 0.1],
+  "order_thresholds": [6, 6, 6],
   "min_leq": 30.0,
   "total_length": 60.0,
   "cached_length": 30.0,
@@ -25,5 +24,5 @@
   "sensitivity": -28.34,
   "delay_print_samples": 300,
   "add_spectrogram": false,
-  "verbose": true
+  "verbose": false
 }
