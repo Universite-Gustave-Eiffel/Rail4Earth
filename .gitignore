@@ -33,3 +33,5 @@ examples/*.ogg
 # openvpn server configuration
 services/ansible_openvpn/docker/openvpn-data
 config.json
+
+.vscode/

@@ -30,12 +30,30 @@
 import unittest
 import soundfile as sf
 import types
+import tempfile
+import os
+import requests
 
-from services.zero_trigger import TriggerProcessor
+from zero_trigger import TriggerProcessor
 
 class TestZeroTrigger(unittest.TestCase):
 
     def test_trigger(self):
+
+        # make a directory for the test
+        test_dir = tempfile.gettempdir() + '/noisesensor/test'
+        os.makedirs(test_dir, exist_ok=True)
+
+        # Download the yamnet model
+        r = requests.get("https://github.com/Universite-Gustave-Eiffel/Rail4Earth/releases/download/static_files/yamnet.tflite")
+        yamnet_tflite_file = test_dir + '/yamnet.tflite'
+        open(yamnet_tflite_file, 'wb').write(r.content)
+
+        # Download the test audio file
+        r = requests.get("https://github.com/Universite-Gustave-Eiffel/Rail4Earth/releases/download/static_files/test_trains_with_voice_16kHz_24bit.wav")
+        test_audio_file = test_dir + 'test_trains_with_voice_16kHz_24bit.wav'
+        open(test_audio_file, 'wb').write(r.content)
+        
         config = {
             "trigger_count": 400,
             "trigger_ban": ["Speech"],
@@ -55,7 +73,7 @@ class TestZeroTrigger(unittest.TestCase):
             "output_address_recording": "tcp://127.0.0.1:10002",
             "output_address_recognition": "tcp://127.0.0.1:10003",
             "yamnet_class_map": "third_parties/yamnet/yamnet/yamnet_class_threshold_map.csv",
-            "yamnet_weights": "third_parties/yamnet/yamnet/yamnet.tflite",
+            "yamnet_weights": yamnet_tflite_file,
             "yamnet_cutoff_frequency": 0,
             "yamnet_max_gain": 24.0,
             "yamnet_window_time": 5.0,
@@ -67,7 +85,7 @@ class TestZeroTrigger(unittest.TestCase):
         config = types.SimpleNamespace(**config)
         trigger = TriggerProcessor(config)
 
-        data, sr = sf.read('tests/test_trains_with_voice_16kHz_24bit.wav', dtype='float32')
+        data, sr = sf.read(test_audio_file, dtype='float32')
 
         # Split the audio data into subsets of 5 seconds
         yamnet_audio_length = int(config.yamnet_window_time * sr)  # 5 seconds * sample rate
@@ -94,11 +112,10 @@ class TestZeroTrigger(unittest.TestCase):
             
                 do_trigger = trigger.should_trigger(document)
 
-                if document["scores"]["Rail transport"] >= 0.03:
-                    print(document)
                 if do_trigger:
                     print("TRAIN !!! at %ds" % (i*5))
-                    trains.append(i)
+                    print(document)
+                    trains.append(i * config.yamnet_window_time)
                     wait_blocks = config.cached_length // config.yamnet_window_time
             
             elif wait_blocks > 0:
@@ -108,10 +125,21 @@ class TestZeroTrigger(unittest.TestCase):
                         ban_document = trigger.generate_yamnet_document_tags(yamnet_audio_cache_block, config.trigger_ban, config.add_spectrogram)
                         if trigger.should_ban(ban_document):
                             print(ban_document)
+                            bans.append(i * config.yamnet_window_time - config.cached_length)
                             break
-            
-        self.assertEqual(train_count, 5)
+                        
+        # seconds in the wav file where trains should be found
+        expected_trains = [35, 100, 165, 245, 300] 
+        # speech audio should not be found at these seconds
+        expected_bans = [35]
+
+        self.assertEqual(len(trains), len(expected_trains))
+        for i in range(len(trains)):
+            self.assertAlmostEqual(trains[i], expected_trains[i], delta=10)
+
+        self.assertEqual(len(bans), len(expected_bans))
+        for i in range(len(bans)):
+            self.assertAlmostEqual(bans[i], expected_bans[i], delta=10)
 
 if __name__ == '__main__':
     unittest.main()
-
