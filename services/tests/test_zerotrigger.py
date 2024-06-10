@@ -33,7 +33,7 @@ import types
 import tempfile
 import os
 import requests
-
+from zmq.utils import jsonapi
 from zero_trigger import TriggerProcessor
 
 class TestZeroTrigger(unittest.TestCase):
@@ -114,7 +114,7 @@ class TestZeroTrigger(unittest.TestCase):
 
                 if do_trigger:
                     print("TRAIN !!! at %ds" % (i*5))
-                    print(document)
+                    print(jsonapi.dumps(document))
                     trains.append(i * config.yamnet_window_time)
                     wait_blocks = config.cached_length // config.yamnet_window_time
             
@@ -124,7 +124,7 @@ class TestZeroTrigger(unittest.TestCase):
                     for yamnet_audio_cache_block in yamnet_audio_cache:
                         ban_document = trigger.generate_yamnet_document_tags(yamnet_audio_cache_block, config.ban_tags, config.add_spectrogram)
                         if trigger.should_ban(ban_document):
-                            print(ban_document)
+                            print(jsonapi.dumps(ban_document))
                             bans.append(i * config.yamnet_window_time - config.cached_length)
                             break
                         
