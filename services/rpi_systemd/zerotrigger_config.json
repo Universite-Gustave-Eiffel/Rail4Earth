@@ -1,11 +1,12 @@
 {
   "trigger_count": 400,
-  "trigger_ban": [
-    "Speech"
-  ],
+  "ban_tags": ["Speech"],
+  "ban_thresholds": [],
   "configuration_file": "",
-  "trigger_tag": ["Train", "Rail transport", "Railroad car, train wagon"],
-  "min_leq": 0.0,
+  "trigger_tags": ["Train", "Rail transport", "Railroad car, train wagon"],
+  "trigger_thresholds": [0.1, 0.1, 0.1],
+  "order_thresholds": [6, 6, 6],
+  "min_leq": 30.0,
   "total_length": 60.0,
   "cached_length": 30.0,
   "sample_rate": 48000,
@@ -18,7 +19,7 @@
   "yamnet_class_map": "third_parties/yamnet/yamnet/yamnet_class_threshold_map.csv",
   "yamnet_weights": "third_parties/yamnet/yamnet/yamnet.tflite",
   "yamnet_cutoff_frequency": 0,
-  "yamnet_max_gain": 8.0,
+  "yamnet_max_gain": 24.0,
   "yamnet_window_time": 5.0,
   "sensitivity": -28.34,
   "delay_print_samples": 300,

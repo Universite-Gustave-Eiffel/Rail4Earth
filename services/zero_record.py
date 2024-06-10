@@ -121,18 +121,62 @@ class AudioFolderPlayListBuffer(io.BytesIO):
         return super().read(__size)
 
 
+class AudioFolderPlayOnce(io.BytesIO):
+    def __init__(self, folder_or_file, sample_rate, resample_method, speed=1.0):
+        super().__init__(b"")
+        self.speed = speed
+        self.sample_rate = sample_rate
+        self.playlist = []
+        if os.path.isdir(folder_or_file):
+            self.playlist = [folder_or_file+os.sep+filepath for filepath in os.listdir(folder_or_file) if filepath.lower().endswith(".wav")]
+        else:
+            self.playlist.append(folder_or_file)
+        self.resample_method = resample_method
+
+    def get_bytes_rate(self):
+        return int(self.sample_rate * 4 * self.speed)
+
+    def read(self, __size: int = ...) -> bytes:
+        if len(self.playlist) > 0 and len(self.getbuffer()) == self.tell():
+            import soundfile as sf
+            import random
+            import numpy as np
+            # push new data
+            file_name = self.playlist[random.randrange(0, len(self.playlist))]
+            self.playlist.remove(file_name)
+            wav_data, sr = sf.read(file_name, dtype=np.int16)
+            print("Playing " + file_name + " sample rate %d Hz-> %d Hz" % (sr, self.sample_rate))
+            assert wav_data.dtype == np.int16, 'Bad sample type: %r' % wav_data.dtype
+            waveform = wav_data / 32768.0  # Convert to [-1.0, +1.0]
+            waveform = waveform.astype('float32')
+            # Convert to mono and the sample rate expected by YAMNet.
+            if len(waveform.shape) > 1:
+              waveform = np.mean(waveform, axis=1)
+            if sr != self.sample_rate:
+                import resampy
+                waveform = resampy.resample(waveform, sr, self.sample_rate,
+                                            filter=self.resample_method)
+            super().__init__(b"")
+            self.write(waveform.tobytes())
+            self.seek(0)
+        return super().read(__size)
+
 def publish_samples(args):
     block_size = args.block_size
     byte_rate = args.debug_byte_rate
     if byte_rate > 0:
         print("Warning zero_record in debug mode, sampling clocked at %d Hz" %
               byte_rate)
-    if args.wave == "":
-        input_buffer = sys.stdin.buffer
-    else:
+    if args.wave != "":
         input_buffer = AudioFolderPlayListBuffer(args.wave, args.sample_rate,
                                                  args.resample_method)
         byte_rate = input_buffer.get_bytes_rate()
+    elif args.wave_once != "":
+        input_buffer = AudioFolderPlayOnce(args.wave_once, args.sample_rate,
+                                                 args.resample_method, args.wave_speed)
+        byte_rate = input_buffer.get_bytes_rate()
+    else:
+        input_buffer = sys.stdin.buffer
     manager = ZeroMQThread(args=args)
     manager.start()
     start = time.time()
@@ -241,10 +285,20 @@ def main():
                         help="You can use a raw file input and "
                              "provide the expected bytes per second of "
                              "transfer", default=0, type=int)
-    parser.add_argument("-w", "--wave", help="File name or folder containing "
-                                             "wave file(s), will be used "
-                                             "instead of stdin", default="",
-                        type=str)
+    parser.add_argument("-w", "--wave", 
+                        help="File name or folder containing "
+                            "wave file(s), will be used "
+                            "instead of stdin, will be played repeatedly",
+                        default="", type=str)
+    parser.add_argument("-wo", "--wave_once",
+                        help="File name or folder containing "
+                            "wave file(s), will be used "
+                            "instead of stdin, will be only played once\n "
+                            "IGNORED IF -w IS SET",
+                        default="", type=str)
+    parser.add_argument("-ws", "--wave_speed",
+                        help="wave file read speed multpiplier",
+                        default="1.0", type=float)
     parser.add_argument("--delay_print_rate",
                         help="Delay in second between each print of byte rate",
                         default=0, type=float)

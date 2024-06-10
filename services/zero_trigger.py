@@ -244,9 +244,9 @@ class TriggerProcessor:
         if self.config.yamnet_max_gain > 0:
             # apply gain
             max_value = max(1e-12, float(np.max(np.abs(samples))))
-            gain = 10 * math.log10(1 / max_value)
-            gain = min(self.config.yamnet_max_gain, gain)
-            samples *= 10 ** (gain / 10.0)
+            max_gain = 20 * math.log10(1 / max_value)
+            gain = min(self.config.yamnet_max_gain, max_gain)
+            samples *= 10 ** (gain / 20.0)
         # Predict YAMNet classes.
         self.yamnet_interpreter.resize_tensor_input(
             self.tensors.waveform_input_index,
@@ -279,6 +279,51 @@ class TriggerProcessor:
                     audio_data_samples):
                 self.samples_stack.popleft()
         return audio_data_samples
+
+    def generate_yamnet_document_tags(self, samples, tags: list[str], add_spectrogram: bool = False):
+        """
+        @param samples: Audio samples in 16khz sample rate
+        @param tags: list of tags to include in the document
+        @param add_spectrogram: add spectrogram in dictionary
+        @return: dict
+        """
+        tags_indexes = [self.yamnet_classes[0].index(tag) for tag in tags if tag in self.yamnet_classes[0]]
+        if len(tags_indexes) == 0:
+            print("No tags to process or tags not found in the yamnet list")
+            return {}
+        document, document_scores, document_orders = ({}, {}, {})
+        start = time.time()
+        scores, embeddings, spectrogram = self.process_tags(samples)
+        self.processing_time += time.time() - start
+        ordered_scores = np.argsort(scores)
+
+        # Take maximum found prediction (was avg in the ref)
+        prediction = np.max(scores, axis=0)
+
+        for tag_i in tags_indexes:
+            tag_name = self.yamnet_classes[0][tag_i]
+            tag_score = prediction[tag_i]
+            tag_order = 521 - np.max(np.where(ordered_scores==tag_i)[1])
+            document_scores.update({tag_name: tag_score})
+            document_orders.update({tag_name: tag_order})
+
+        if self.config.verbose:
+            print("%s tags:%s \n processed in %.3f seconds for "
+                  "%.1f seconds of audio." %
+                  (time.strftime("%Y-%m-%d %H:%M:%S"),
+                   ",".join(tags), self.processing_time,
+                   len(samples) /
+                   self.yamnet_config.sample_rate))
+        self.processing_time = 0
+        document = {
+            "scores": document_scores,
+            "orders": document_orders,
+        }
+        if add_spectrogram:
+            document["spectrogram"] = base64.b64encode(
+                spectrogram.astype(np.float16).
+                tobytes()).decode("UTF-8")
+        return document
 
     def generate_yamnet_document(self, samples, add_spectrogram: bool):
         """
@@ -322,16 +367,93 @@ class TriggerProcessor:
         # there is 2x more cells because there is 50% overlap
         threshold_time = {
             self.yamnet_classes[0][i]: np.round(scores[:, i], 3).tolist()
-            for i in classes_threshold_index}
-        document = {"scores": document_scores,
-                    "scores_perc": scores_percentage,
-                    "scores_time": threshold_time}
+            for i in classes_threshold_index
+        }
+        document = {
+            "scores": document_scores,
+            "scores_perc": scores_percentage,
+            "scores_time": threshold_time
+        }
         if add_spectrogram:
             document["spectrogram"] = base64.b64encode(
                 spectrogram.astype(np.float16).
                 tobytes()).decode("UTF-8")
-        return document, classification_tag
+        return document
 
+    def should_trigger(self, document):
+        """
+        Check if the document is triggering
+        @param document: dict
+        @return: bool
+        """
+        trigger_thresholds = []
+        if len(self.config.trigger_thresholds) == 0:
+            if self.config.verbose:
+                print("WARNING : Trigger threshold is empty, no trigger will ever be sent")
+            return False
+        elif len(self.config.trigger_thresholds) == 1:
+            trigger_thresholds = [self.config.trigger_thresholds[0]] * len(self.config.trigger_tags)
+        elif len(self.config.trigger_thresholds) != len(self.config.trigger_tags):
+            if self.config.verbose:
+                print("WARNING : Trigger threshold must be the same length as trigger tags, using the first value for all tags")
+            trigger_thresholds = [self.config.trigger_thresholds[0]] * len(self.config.trigger_tags)
+        else:
+            trigger_thresholds = self.config.trigger_thresholds
+
+        order_thresholds = []
+        if len(self.config.order_thresholds) == 0:
+            order_thresholds = [521] * len(self.config.trigger_tags)
+        elif len(self.config.order_thresholds) == 1:
+            order_thresholds = [self.config.order_thresholds[0]] * len(self.config.trigger_tags)
+        elif len(self.config.order_thresholds) != len(self.config.trigger_tags):
+            if self.config.verbose:
+                print("WARNING : Order threshold must be the same length as trigger tags, using the first value for all tags")
+            order_thresholds = [self.config.order_thresholds[0]] * len(self.config.trigger_tags)
+        else:
+            order_thresholds = self.config.order_thresholds
+
+        for i, tag in enumerate(self.config.trigger_tags):
+            score = document["scores"][tag]
+            order = document["orders"][tag]
+
+            if order <= order_thresholds[i] and score >= trigger_thresholds[i]:
+                return True
+
+        return False
+
+    def should_ban(self, document):
+        """
+        Check if the document contains a banned condition
+        @param document: dict
+        @return: bool
+        """
+
+        ban_thresholds = []
+        if len(self.config.ban_thresholds) == 0:
+            if self.config.verbose:
+                print("WARNING : Trigger ban threshold is empty, using default yamnet values")
+            for banned_tag in self.config.ban_tags:
+                banned_tag_index = self.yamnet_classes[0].index(banned_tag)
+                banned_tag_threshold = self.yamnet_classes[1][banned_tag_index]
+                if self.config.verbose:
+                    print("For tag %s (index %d) using threshold %f" % (banned_tag, banned_tag_index, banned_tag_threshold))
+                ban_thresholds.append(banned_tag_threshold)
+        elif len(self.config.ban_thresholds) == 1:
+            ban_thresholds = [self.config.ban_thresholds[0]] * len(self.config.ban_tags)
+        elif len(self.config.ban_thresholds) != len(self.config.ban_tags):
+            if self.config.verbose:
+                print("WARNING : Trigger ban threshold must be the same length as trigger tags, using the first value for all tags")
+            ban_thresholds = [self.config.ban_thresholds[0]] * len(self.config.ban_tags)
+        else:
+            ban_thresholds = self.config.ban_thresholds
+
+        for i, banned_tag in enumerate(self.config.ban_tags):
+            score = document["scores"][banned_tag]
+
+            if score >= ban_thresholds[i]:
+                return True
+        return False
+    
     def run(self):
         reference_pressure = 1 / 10 ** (
                 (94 - self.config.sensitivity) / 20.0)
@@ -378,23 +500,19 @@ class TriggerProcessor:
                     if self.config.verbose:
                         print("Leq: %.2f dB > %.2f dB, so now try to recognize"
                               " sound source " % (leq, self.config.min_leq))
-                    document, classification_tag = self.generate_yamnet_document(
-                        self.yamnet_samples, self.config.add_spectrogram)
-                    # If trigger_tag defined, we process only if one of the
-                    # tag is specified
-                    keep_classification = len(self.config.trigger_tag) == 0
-                    if len(self.config.trigger_tag) > 0:
-                        for tag in self.config.trigger_tag:
-                            if tag in classification_tag:
-                                keep_classification = True
-                                break
-                    if not keep_classification:
-                        # classifier rejected all known classes
+                    document = self.generate_yamnet_document_tags(
+                        self.yamnet_samples, self.config.trigger_tags, self.config.add_spectrogram)
+
+                    do_trigger = self.should_trigger(document)
+                    if not do_trigger:
                         if self.config.verbose:
-                            print("No expected tag found, do not transmit"
-                                  " document")
+                            print("Trigger conditions not met, keep watching")
                         status = "wait_trigger"
                         continue
+
+                    if self.config.verbose:
+                        print("Trigger conditions met ! ACTIVATE !")
+
                     document["leq"] = round(leq, 2)
                     document["date"] = epoch_to_elasticsearch_date(self.frame_time)
                     if self.remaining_triggers >= 0:
@@ -437,7 +555,7 @@ class TriggerProcessor:
                         # Compress audio samples
                         output = io.BytesIO()
                         keep_audio = True
-                        if len(self.config.trigger_ban) > 0:
+                        if len(self.config.ban_tags) > 0:
                             # There is banned sound source, analyze all the recorded audio to check
                             # if there is banned tags into it
                             samples = np.frombuffer(samples_trigger.getbuffer(), dtype=np.float32)
@@ -448,19 +566,13 @@ class TriggerProcessor:
                                                            self.yamnet_config.sample_rate,
                                                            filter=self.config.
                                                            resample_method)
-                            doc, classification_tag = self.generate_yamnet_document(
-                                samples, self.config.add_spectrogram)
+                            ban_doc = self.generate_yamnet_document_tags(
+                                samples, self.config.ban_tags, self.config.add_spectrogram)
                             # Copy score time in order to match with recording length
-                            document["scores_time"] = doc["scores_time"]
+                            # document["scores_time"] = doc["scores_time"]
                             del samples
-                            if len(self.config.trigger_ban) > 0:
-                                for banned_tag in self.config.trigger_ban:
-                                    if banned_tag in doc["scores"].keys():
-                                        if self.config.verbose:
-                                            print("Do not keep audio because %s has been detected"
-                                                  % banned_tag)
-                                        keep_audio = False
-                                        break
+
+                            keep_audio = not self.should_ban(ban_doc)
                         if keep_audio:
                             data, samplerate = sf.read(samples_trigger,
                                                        format='RAW', channels=1,
@@ -509,14 +621,23 @@ if __name__ == "__main__":
     parser.add_argument("--trigger_count",
                         help="limit the number of embedding of audio by day (-1 unlimited)",
                         default=-1, type=int)
-    parser.add_argument("-b", "--trigger_ban",
+    parser.add_argument("-b", "--ban_tags",
                         help="Remove storage of audio if one of the following audio recognition tag is detected",
-                        action='append', type=str)
+                        action='append', type=str, default=[])
+    parser.add_argument("-tbt", "--ban_thresholds", 
+                        help="thresholds for the yamnet scores for the *ban* tags",
+                        action='append', type=float, default=[])
     parser.add_argument("-c", "--configuration_file",
                         help="Provide json configuration file instead of arguments", default="",
                         type=str)
-    parser.add_argument("-t", "--trigger_tag", help="Send json only if this tags are detected",
+    parser.add_argument("-t", "--trigger_tags", help="list of yamnet tags to watch",
                         action='append', type=str, default=[])
+    parser.add_argument("-tt", "--trigger_thresholds",
+                        help="thresholds for the yamnet scores. If any of them if above the threshold, the trigger is activated. If only one is provided, it will be used for all tags. If empty, no trigger will ever be sent.",
+                        action='append', type=float, default=[])
+    parser.add_argument("-ot", "--order_thresholds",
+                        help="thresholds for the yamnet order. If the watched tags don't appear in the first X yamnet scores, dirscard the trigger. If only one is provided, it will be used for all tags. If empty, no order threshold is applied.",
+                        action='append', type=int, default=[])
     parser.add_argument("--min_leq", help="minimum leq to trigger an event", default=30, type=float)
     parser.add_argument("--total_length",
                         help="record length total in seconds to be embedded into the output json",
@@ -544,7 +665,7 @@ if __name__ == "__main__":
                                                 type=str))
     parser.add_argument("--yamnet_cutoff_frequency", help="Yamnet highpass filter frequency",
                         default=0, type=float)
-    parser.add_argument("--yamnet_max_gain", help="Yamnet maximum gain in dB", default=8.0,
+    parser.add_argument("--yamnet_max_gain", help="Yamnet maximum gain in dB", default=24.0,
                         type=float)
     parser.add_argument("--yamnet_window_time", help="Sound source recognition time in seconds",
                         default=5.0,
