@@ -133,8 +133,6 @@ class AcousticIndicatorsProcessor:
                     self.config.sensitivity = round(np.average(
                         np.array(self.auto_calibration_stack)), 2)
                     print("Save new sensitivity value %.2f dB" % self.config.sensitivity)
-                    self.filter_config["configuration"][
-                        "sensitivity"] = self.config.sensitivity
                     self.save_data()
                     self.auto_calibration_stack = []
                     self.auto_calibration_time = []
