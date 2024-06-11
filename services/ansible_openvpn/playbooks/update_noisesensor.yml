@@ -12,6 +12,8 @@
       become: true
       ansible.builtin.systemd:
         name: "{{ item }}"
+        daemon_reload: true
+        enabled: true
         state: restarted
       with_items:
         - zeroble.service
