@@ -78,6 +78,8 @@ var devices = new Handsontable(stationTable, {
   }
 });
 
+const columnSorting = devices.getPlugin('columnSorting');
+
 function fetch() {
     $.ajax({
       type: "GET",
@@ -89,7 +91,11 @@ function fetch() {
             element["epoch_updated"] = Date.parse(element["Last Ref"]+'Z');
             downloadedData.push(element);
         });
-        devices.render();
+        devices.loadData(downloadedData);
+        columnSorting.sort({
+         column: 2,
+         sortOrder: 'desc',
+         });
       },
       contentType : 'application/json',
     });
