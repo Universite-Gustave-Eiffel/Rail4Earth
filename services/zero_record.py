@@ -70,6 +70,8 @@ class ZeroMQThread(threading.Thread):
 
         context = zmq.Context()
         socket = context.socket(zmq.PUB)
+        if self.args.zmq_audio_buffer_size > 0:
+            socket.setsockopt(zmq.SNDBUF, self.args.zmq_audio_buffer_size)
         address = "tcp://%s:%d" % (interface, port)
         socket.bind(address)
         print("Publishing samples on interface:")
@@ -302,6 +304,9 @@ def main():
     parser.add_argument("--delay_print_rate",
                         help="Delay in second between each print of byte rate",
                         default=0, type=float)
+    parser.add_argument("--zmq_audio_buffer_size",
+                        help="ZMQ audio buffer size in bytes. 0 (default) means using default OS value",
+                        default=0, type=int)
     args = parser.parse_args()
     args.running = True
     args.total_bytes_read = 0
