@@ -72,7 +72,7 @@ class ZeroMQThread(threading.Thread):
         socket = context.socket(zmq.PUB)
         if self.args.zmq_audio_buffer_size > 0:
             socket.setsockopt(zmq.SNDBUF, self.args.zmq_audio_buffer_size)
-        address = "tcp://%s:%d" % (interface, port)
+        address = self.args.address if self.args.address else "tcp://%s:%d" % (interface, port)
         socket.bind(address)
         print("Publishing samples on interface:")
         print(address)
@@ -270,6 +270,8 @@ def main():
                                      epilog=epilog, formatter_class=
                                      argparse.RawTextHelpFormatter)
 
+    parser.add_argument("-a", "--address", help="zmq address to publish samples",
+                        type=str)
     parser.add_argument("-p", "--port", help="Port to publish samples",
                         default=10001, type=int)
     parser.add_argument("-i", "--interface", help="Interface to publish",
