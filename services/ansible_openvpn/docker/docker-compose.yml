@@ -167,6 +167,7 @@ services:
     container_name: dashboard
     build:
      context: dashboard
+    restart: unless-stopped
     ports:
       - '8000:80'
     environment:

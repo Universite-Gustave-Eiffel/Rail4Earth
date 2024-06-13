@@ -10,7 +10,6 @@
     <script type="text/javascript" src="static/download.min.js"></script>
     <script type="text/javascript" src="static/daterangepicker.min.js"></script>
     <script type="text/javascript" src="static/handsontable.full.js"></script>
-    <script type="text/javascript" src="static/trigger.js"></script>
     <link type="text/css" href="static/handsontable.full.css" rel="stylesheet" media="screen">
     <link rel="stylesheet" type="text/css" href="static/daterangepicker.css"/>
     <link rel="stylesheet" type="text/css" href="static/forms.css"/>
@@ -37,18 +36,23 @@
             <span>Trigger date interval</span>
         </li>
         <li>
-            <label for="privkey">Private key</label>
+            <label for="privkey">Private key and password</label>
             <input type="file" name="privkey" accept=".priv,.pem">
-            <span>Private key, not transferred</span>
+            <input type="password" name="pwd" placeholder="Key File password"/>
+            <span>Encryption private key and password, not transferred</span>
         </li>
         <li>
-            <label for="pwd">Password</label>
-            <input type="password" name="pwd"/>
-            <span>Private key password, not transferred</span>
+            <label for="hwa">Hardware Address</label>
+            <input type="search" name="hwa" id="hardware_search"/>
+            <span>Filter by device hardware address (empty for no filtering)</span>
         </li>
         <li>
-            <input type="button" value="Fetch" onclick="fetch()">
-            <input type="button" id="download_all_button" disabled value="Download All" onclick="download_all()">
+            <input type="button" value="Fetch" id="fetch_button">
+            <input type="button" id="download_button" value="Download selected">
+            <input type="button" id="play_button" value="Load selected in player">
+        </li>
+        <li>
+            <div id="waveform"></div>
         </li>
         <li>
             <label for="station-frame">Stations</label>
@@ -60,6 +64,6 @@
 
     </ul>
 </div>
-<script type="text/javascript" src="static/read_trigger.js" defer></script>
+<script type="module" src="static/read_trigger.js" data-type="module" defer></script>
 </body>
 </html>
