@@ -1,10 +1,10 @@
+- name: Fetch RPI list from OpenVPN
+  ansible.builtin.import_playbook: fetch_openvpn_hosts.yml
 - name: Fetch RPI status information
   hosts: rpi
   gather_facts: no
   connection: ssh
   tasks:
-    - name: Fetch RPI list from OpenVPN
-      ansible.builtin.import_playbook: fetch_openvpn_hosts.yml
     - name: Fetch hostname and eth0 mac
       ansible.builtin.shell: |
         cat /etc/hosts | grep 127.0.1.1 | awk '{print $2}'
