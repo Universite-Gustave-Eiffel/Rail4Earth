@@ -1,0 +1,1 @@
+This folder contain some scripts that are not linked with any services. Only run manually for debug or maintenance purposes
