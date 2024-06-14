@@ -1,0 +1,50 @@
+{
+  "index": "sensor_yamnet_*",
+  "size" : 100,
+  "_source": false,
+    "sort": [
+        {
+            "date": {
+                "order": "desc"
+            }
+        }
+    ],
+    "query": {
+    "bool": {
+      "must": [{
+          "range": {
+            "date": {
+              "gte": {{ start_time }},
+              "lte": {{ end_time }},
+              "format": "epoch_millis"
+            }
+          }
+        },
+        {
+          "range": {
+            "encrypted_audio_length" : {
+              "gt": 0
+            }
+          }
+        },
+        {
+          "match": {
+            "hwa.keyword": "{{ hwa }}"
+          }
+        }
+      ]
+    }
+  },
+  "fields": [
+    {
+      "field": "date",
+      "format": "epoch_millis"
+    },
+    {
+      "field": "hwa.keyword"
+    },
+    {
+      "field": "scores*"
+    }
+  ]
+}
