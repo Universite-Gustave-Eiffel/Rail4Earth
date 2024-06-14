@@ -1,5 +1,6 @@
 {
   "index": "sensor_location_*",
+  "size": 100,
    "query": {
     "bool": {
       "must": [
