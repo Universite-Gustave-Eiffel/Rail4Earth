@@ -234,12 +234,13 @@ function decrypt_and_download() {
 }
 
 function fetch() {
-    var dateStart = $('input[name="datetimes"]').data('daterangepicker').startDate.valueOf();
-    var dateEnd = $('input[name="datetimes"]').data('daterangepicker').endDate.valueOf();
-
+    let dateStart = $('input[name="datetimes"]').data('daterangepicker').startDate.valueOf();
+    let dateEnd = $('input[name="datetimes"]').data('daterangepicker').endDate.valueOf();
+    let hwa = $('input[name="hwa"]')[0].value;
+    let qhwa = hwa ? "?hwa="+hwa : "";
     $.ajax({
       type: "GET",
-      url: "/api/list-samples/"+dateStart+"/"+dateEnd,
+      url: "/api/list-samples/"+dateStart+"/"+dateEnd+"/"+qhwa,
       success: function(jsonContent) {
         downloadedData.length = 0;
         jsonContent.forEach(function(element) {
@@ -252,7 +253,6 @@ function fetch() {
             downloadedData.push(entry);
         });
         stations.render();
-        document.getElementById('download_all_button').disabled = false;
       },
       contentType : 'application/json',
     });

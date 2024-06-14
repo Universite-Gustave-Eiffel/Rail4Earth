@@ -43,7 +43,10 @@
         </li>
         <li>
             <label for="hwa">Hardware Address</label>
-            <input type="search" name="hwa" id="hardware_search"/>
+            <datalist id="hwa_data_list">
+            {% for hwa in hwa_list %}    <option value="{{hwa}}"></option>
+            {% endfor %}</datalist>
+            <input list="hwa_data_list" type="search" name="hwa" id="hardware_search"/>
             <span>Filter by device hardware address (empty for no filtering)</span>
         </li>
         <li>
@@ -55,7 +58,7 @@
             <div id="waveform"></div>
         </li>
         <li>
-            <label for="station-frame">Stations</label>
+            <label for="station-frame">Last 100 audio samples</label>
             <div id="station-frame">
                 <div id="stations" class="hot handsontable htColumnHeaders"></div>
             </div>
