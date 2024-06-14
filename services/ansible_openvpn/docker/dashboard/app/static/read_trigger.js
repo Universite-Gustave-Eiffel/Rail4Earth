@@ -59,6 +59,7 @@ function loadDateTimePlayer() {
 
 
 var downloadedData = [];
+var privateKey = null;
 loadDateTimePlayer();
 var stationTable = document.getElementById('stations');
 
@@ -182,11 +183,13 @@ function decryptDataWithPrivateKey(data, key) {
 async function do_decrypt(jsonContent) {
     const el = document.getElementById("error_panel");
     try {
-      const pem = await $('input[name="privkey"]')[0].files[0].text();
       const encrypted = atob(jsonContent.encrypted_audio);
-      // convert a Forge certificate from PEM
-      const pki = forge.pki;
-      const privateKey = pki.decryptRsaPrivateKey(pem, $('input[name="pwd"]')[0].value);
+      if(privateKey == null) {
+        // convert a Forge certificate from PEM
+        const pem = await $('input[name="privkey"]')[0].files[0].text();
+        const pki = forge.pki;
+        privateKey = pki.decryptRsaPrivateKey(pem, $('input[name="pwd"]')[0].value);
+      }
       if(privateKey == null) {
           el.style.visibility = "visible";
           el.innerHTML = "Invalid decryption key or password";
@@ -203,7 +206,6 @@ async function do_decrypt(jsonContent) {
           const result = decipher.finish(); // check 'result' for true/false
           // outputs decrypted hex
           // Create regex patterns for replacing unwanted characters in file name
-          const formattedDate = jsonContent.date.replace(new RegExp(`[-:]`, 'g'), "_");
           let format = "raw";
           // look for magic word in file header
           if(decipher.output.data.substring(0,4) == "fLaC") {
@@ -211,8 +213,7 @@ async function do_decrypt(jsonContent) {
           } else if(decipher.output.data.substring(0,3) == "Ogg") {
             format = "ogg";
           }
-          const fname = jsonContent.hwa+"_"+formattedDate+"."+format;
-          download(decipher.output.data, fname, "audio/"+format);
+          return {"data": decipher.output.data, "jsonContent": jsonContent, "format" : format}
       }
     } catch (e) {
         el.style.visibility = "visible";
@@ -221,13 +222,44 @@ async function do_decrypt(jsonContent) {
     }
 }
 
+async function do_decrypt_and_download(jsonContent) {
+      const decrypted_data = await do_decrypt(jsonContent);
+      let formattedDate = decrypted_data.jsonContent.date.replace(new RegExp(`[-:]`, 'g'), "_");
+      let file_name = decrypted_data.jsonContent.hwa+"_"+formattedDate+"."+decrypted_data.format;
+      download(decrypted_data.data, file_name, "audio/"+decrypted_data.format);
+}
+
+async function do_decrypt_and_play(jsonContent) {
+      const decrypted_data = await do_decrypt(jsonContent);
+      var len = decrypted_data.data.length;
+      var buf = new ArrayBuffer(len);
+      var view = new Uint8Array(buf);
+      for (var i = 0; i < len; i++) {
+        view[i] = decrypted_data.data.charCodeAt(i) & 0xff;
+      }
+      let b = new Blob([view], { type : "audio/"+decrypted_data.format });
+      ws.loadBlob(b);
+}
+
 function decrypt_and_download() {
-    sample_id = document.querySelector('input[name="trigger_row"]:checked').value;
+    let sample_id = document.querySelector('input[name="trigger_row"]:checked').value;
     $.ajax({
       type: "GET",
       url: "get-samples/"+btoa(sample_id),
       success: function(jsonContent) {
-            do_decrypt(jsonContent);
+          do_decrypt_and_download(jsonContent);
+      },
+      contentType : 'application/json',
+    });
+}
+
+function decrypt_and_play() {
+    let sample_id = document.querySelector('input[name="trigger_row"]:checked').value;
+    $.ajax({
+      type: "GET",
+      url: "get-samples/"+btoa(sample_id),
+      success: function(jsonContent) {
+            do_decrypt_and_play(jsonContent);
       },
       contentType : 'application/json',
     });
@@ -350,8 +382,8 @@ const ws = WaveSurfer.create({
   container: '#waveform',
   waveColor: 'rgb(200, 0, 200)',
   progressColor: 'rgb(100, 0, 100)',
-  url: '',
-  sampleRate: 22050,
+  normalize: true,
+  mediaControls:true
 })
 
 // Initialize the Spectrogram plugin
@@ -359,7 +391,7 @@ ws.registerPlugin(
   Spectrogram.create({
     labels: true,
     height: 200,
-    splitChannels: true,
+    splitChannels: true
   }),
 )
 
@@ -370,3 +402,4 @@ ws.once('interaction', () => {
 
 document.getElementById('fetch_button').addEventListener('click', fetch)
 document.getElementById('download_button').addEventListener('click', decrypt_and_download)
+document.getElementById('play_button').addEventListener('click', decrypt_and_play)
