@@ -383,15 +383,18 @@ const ws = WaveSurfer.create({
   waveColor: 'rgb(200, 0, 200)',
   progressColor: 'rgb(100, 0, 100)',
   normalize: true,
-  mediaControls:true
+  mediaControls:true,
+  height: 100,
 })
 
 // Initialize the Spectrogram plugin
 ws.registerPlugin(
   Spectrogram.create({
     labels: true,
-    height: 200,
-    splitChannels: true
+    labelsColor: "#7c9cb6",
+    height: 100,
+    splitChannels: true,
+    maxFrequency: 8000
   }),
 )
 
@@ -399,6 +402,33 @@ ws.registerPlugin(
 ws.once('interaction', () => {
   ws.play()
 })
+
+// Create Web Audio context
+const audioContext = new AudioContext()
+
+var gainNode = null
+
+// Connect the audio to the equalizer
+ws.media.addEventListener(
+  'canplay',
+  () => {
+    // Create a MediaElementSourceNode from the audio element
+    const mediaNode = audioContext.createMediaElementSource(ws.media)
+
+	gainNode = audioContext.createGain();
+	gainNode.gain.value = 100 * ws.media.volume;
+    mediaNode.connect(gainNode);
+    // Connect the filters to the audio output
+    gainNode.connect(audioContext.destination)
+  },
+  { once: true },
+)
+
+ws.media.onvolumechange = function() {
+    if(gainNode != null) {
+        gainNode.gain.value = 100 * ws.media.volume;
+    }
+}
 
 document.getElementById('fetch_button').addEventListener('click', fetch)
 document.getElementById('download_button').addEventListener('click', decrypt_and_download)
