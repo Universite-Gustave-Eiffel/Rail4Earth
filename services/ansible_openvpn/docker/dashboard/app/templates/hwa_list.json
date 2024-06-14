@@ -5,7 +5,8 @@
   "aggs": {
     "hwa_list": {
       "terms": {
-        "field": "hwa.keyword"
+        "field": "hwa.keyword",
+        "size": 100
       }
     }
   },
