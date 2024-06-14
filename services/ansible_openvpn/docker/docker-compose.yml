@@ -101,8 +101,8 @@ services:
       - certs:/usr/share/elasticsearch/config/certs
       - esdata01:/usr/share/elasticsearch/data
       - es_snapshots:/snapshot
-    ports:
-      - ${ES_PORT}:9200
+    #ports:
+    #  - ${ES_PORT}:9200
     environment:
       - node.name=es01
       - path.repo=/snapshot
