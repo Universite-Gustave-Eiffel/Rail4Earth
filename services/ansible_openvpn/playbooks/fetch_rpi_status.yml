@@ -17,6 +17,10 @@
     - name: Print result
       ansible.builtin.debug:
         msg: Raspberry Pi {{rpi_host.stdout}}
+    - name: Fetch hostname and eth0 mac
+      ansible.builtin.shell: /usr/sbin/ifconfig eth0 2>/dev/null|awk '/ether/ {print $2}'
+      register: hwa
+      when: rpi_host.stdout.find(expected_string) > -1
     - name: Alert if 5V usb not plugged in
       vars:
         expected_string: '"powerInput": "PRESENT"'
@@ -25,9 +29,7 @@
         url: https://api.pushbullet.com/v2/pushes
         method: POST
         body_format: "json"
-        body: "{ \"content\": \"{{ rpi_host.stdout }}\" }"
-        force_basic_auth: true
-        status_code: 201
+        body: "{ \"hwa\": \"{{ hwa.stdout }}\" }"
         headers:
           Access-Token: "{{ pushbullet_api_key }}"
       delegate_to: localhost
