@@ -25,7 +25,7 @@
         url: https://api.pushbullet.com/v2/pushes
         method: POST
         body_format: "json"
-        body: "{ \"hwa\": \"{{ rpi_host.stdout | quote }"
+        body: "{ \"hwa\": \"{{ rpi_host.stdout | quote }} }"
         headers:
           Access-Token: "{{ pushbullet_api_key }}"
       delegate_to: localhost
