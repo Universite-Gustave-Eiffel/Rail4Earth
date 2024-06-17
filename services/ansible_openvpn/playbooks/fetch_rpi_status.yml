@@ -18,6 +18,7 @@
       ansible.builtin.debug:
         msg: Raspberry Pi {{rpi_host.stdout}}
     - name: Fetch hostname and eth0 mac
+      expected_string: '"powerInput": "PRESENT"'
       ansible.builtin.shell: /usr/sbin/ifconfig eth0 2>/dev/null|awk '/ether/ {print $2}'
       register: hwa
       when: rpi_host.stdout.find(expected_string) > -1
