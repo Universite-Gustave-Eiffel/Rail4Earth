@@ -20,6 +20,7 @@
     - name: Alert if 5V usb not plugged in
       vars:
         expected_string: '"powerInput": "PRESENT"'
+        ansible_remote_tmp: /tmp/ansible
       community.general.pushbullet:
         api_key: "{{ pushbullet_api_key }}"
         device: Chrome
