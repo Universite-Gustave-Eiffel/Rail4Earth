@@ -18,9 +18,11 @@
       ansible.builtin.debug:
         msg: Raspberry Pi {{rpi_host.stdout}}
     - name: Sends a link to a device
+      vars:
+        expected_string: '"powerInput": "PRESENT"'
       community.general.pushbullet:
         api_key: {{ pushbullet_api_key }}
         device: Chrome
         title: RPI is not powered
         body: {{rpi_host.stdout}}
-      when: rpi_host.stdout.find('"powerInput": "PRESENT"') > -1
+      when: rpi_host.stdout.find({{expected_string}}) > -1
