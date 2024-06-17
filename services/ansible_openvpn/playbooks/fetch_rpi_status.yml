@@ -22,9 +22,10 @@
         expected_string: '"powerInput": "PRESENT"'
         ansible_remote_tmp: /tmp/ansible
       ansible.builtin.uri:
+        url: https://api.pushbullet.com/v2/pushes
         method: POST
         body_format: "json"
-        body: "{{rpi_host.stdout}}"
+        body: "{ \"content\": \"{{ rpi_host.stdout }}\" }"
         force_basic_auth: true
         status_code: 201
         headers:
