@@ -30,10 +30,11 @@
 #  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from pijuice import PiJuice
+import json
 
 # Instantiate PiJuice interface object
 pijuice = PiJuice(1, 0x14)
 
 # Read PiJuice status.
-print(pijuice.status.GetStatus())
-print(pijuice.status.GetBatteryVoltage())
+print(json.dumps({"status": pijuice.status.GetStatus(),
+                  "battery": dict(pijuice.status.GetBatteryVoltage())}, indent=2))

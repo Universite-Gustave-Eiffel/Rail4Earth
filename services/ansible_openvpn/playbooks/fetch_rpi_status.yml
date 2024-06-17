@@ -4,6 +4,8 @@
   hosts: rpi
   gather_facts: no
   connection: ssh
+  vars:
+    ansible_remote_tmp: /run/user/1000
   tasks:
     - name: Fetch hostname and eth0 mac
       ansible.builtin.shell: |
@@ -18,4 +20,4 @@
       register: result
     - name: Print result
       ansible.builtin.debug:
-        msg: Raspberry Pi {{rpi_host.stdout}}
+        msg: Raspberry Pi {{rpi_host.stdout}} {{result.stdout}}
