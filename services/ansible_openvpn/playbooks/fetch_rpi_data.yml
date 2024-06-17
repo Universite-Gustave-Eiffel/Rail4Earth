@@ -5,7 +5,6 @@
     source: '/home/pi/noisesensor/out/'
     source2: '/home/pi/noisesensor/outsd/'
     destination: '/home/semaphore/data/to_process/'
-    ansible_remote_tmp: /run/user/1000
   tasks:
   - name: get current RX
     shell: /usr/sbin/ifconfig tun0 | grep "RX packets" | awk '{print $5}'
@@ -31,6 +30,8 @@
       state: directory
     delegate_to: localhost
   - name: data synchronization
+    vars:
+      ansible_remote_tmp: /run/user/1000
     ansible.posix.synchronize:
       mode: 'pull'
       src: '{{ source }}'
