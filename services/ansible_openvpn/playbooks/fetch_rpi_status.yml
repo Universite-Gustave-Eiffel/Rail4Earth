@@ -21,10 +21,13 @@
       vars:
         expected_string: '"powerInput": "PRESENT"'
         ansible_remote_tmp: /tmp/ansible
-      community.general.pushbullet:
-        api_key: "{{ pushbullet_api_key }}"
-        device: Chrome
-        title: RPI is not powered
+      ansible.builtin.uri:
+        method: POST
         body: "{{rpi_host.stdout}}"
-      when: rpi_host.stdout.find(expected_string) > -1
+        force_basic_auth: true
+        status_code: 201
+        headers:
+          Access-Token: "{{ pushbullet_api_key }}"
+          Content-Type: "application/json"
       delegate_to: localhost
+      when: rpi_host.stdout.find(expected_string) > -1
