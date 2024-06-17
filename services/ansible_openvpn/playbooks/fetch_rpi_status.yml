@@ -17,7 +17,7 @@
     - name: Print result
       ansible.builtin.debug:
         msg: Raspberry Pi {{rpi_host.stdout}}
-    - name: Sends a link to a device
+    - name: Alert if 5V usb not plugged in
       vars:
         expected_string: '"powerInput": "PRESENT"'
       community.general.pushbullet:
@@ -26,3 +26,4 @@
         title: RPI is not powered
         body: "{{rpi_host.stdout}}"
       when: rpi_host.stdout.find(expected_string) > -1
+      delegate_to: localhost
