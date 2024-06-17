@@ -19,4 +19,4 @@
       register: journal_content
     - name: Print result
       ansible.builtin.debug:
-        msg: {{journal_content.stdout}}
+        msg: "{{ journal_content.stdout }}"
