@@ -6,6 +6,7 @@
   connection: ssh
   vars:
     ansible_remote_tmp: /run/user/1000
+    pushbullet_api_key: "{{ lookup('ansible.builtin.env', 'PUSHBULLET_API_KEY') }}"
   tasks:
     - name: Fetch hostname and eth0 mac
       ansible.builtin.shell: |
@@ -16,3 +17,10 @@
     - name: Print result
       ansible.builtin.debug:
         msg: Raspberry Pi {{rpi_host.stdout}}
+    - name: Sends a link to a device
+      community.general.pushbullet:
+        api_key: {{ pushbullet_api_key }}
+        device: Chrome
+        title: RPI is not powered
+        body: {{rpi_host.stdout}}
+      when: rpi_host.stdout.find('"powerInput": "PRESENT"') > -1
