@@ -21,8 +21,8 @@
       vars:
         expected_string: '"powerInput": "PRESENT"'
       community.general.pushbullet:
-        api_key: {{ pushbullet_api_key }}
+        api_key: "{{ pushbullet_api_key }}"
         device: Chrome
         title: RPI is not powered
-        body: {{rpi_host.stdout}}
+        body: "{{rpi_host.stdout}}"
       when: rpi_host.stdout.find({{expected_string}}) > -1
