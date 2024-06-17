@@ -10,6 +10,12 @@
         cat /etc/hosts | grep 127.0.1.1 | awk '{print $2}'
         /usr/sbin/ifconfig eth0 2>/dev/null|awk '/ether/ {print $2}'
       register: rpi_host
+    - name: Launch python script for pijuice stats
+      ansible.builtin.script:
+        cmd: pijuice/pijuice_getbattery_voltage.py
+      args:
+        executable: python3
+      register: result
     - name: Print result
       ansible.builtin.debug:
         msg: Raspberry Pi {{rpi_host.stdout}}
