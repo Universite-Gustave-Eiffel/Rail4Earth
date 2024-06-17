@@ -6,7 +6,7 @@
   "trigger_tags": ["Train", "Rail transport", "Railroad car, train wagon"],
   "trigger_thresholds": [0.1, 0.1, 0.1],
   "order_thresholds": [6, 6, 6],
-  "min_leq": 30.0,
+  "min_leq": 0,
   "total_length": 60.0,
   "cached_length": 30.0,
   "sample_rate": 48000,
@@ -21,7 +21,7 @@
   "yamnet_cutoff_frequency": 0,
   "yamnet_max_gain": 24.0,
   "yamnet_window_time": 5.0,
-  "sensitivity": -28.34,
+  "sensitivity": -42.87,
   "delay_print_samples": 300,
   "add_spectrogram": false,
   "verbose": false
