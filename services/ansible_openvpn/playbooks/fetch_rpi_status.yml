@@ -25,4 +25,4 @@
         device: Chrome
         title: RPI is not powered
         body: "{{rpi_host.stdout}}"
-      when: rpi_host.stdout.find({{expected_string}}) > -1
+      when: rpi_host.stdout.find(expected_string) > -1
