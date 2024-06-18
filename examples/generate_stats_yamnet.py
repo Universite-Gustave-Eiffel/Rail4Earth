@@ -67,6 +67,7 @@ def main():
         request_timeout=args.connection_timeout
     )
     search_after = None
+    print("hwa,date,l10")
     while True:
         result = client.search(index=args.yamnet_index, _source=False,
                                fields=[{"field": "date", "format": "epoch_millis"}, "hwa"],
@@ -74,7 +75,6 @@ def main():
         hits = result["hits"]["hits"]
         if len(hits) == 0:
             break
-        print("hwa,date,l10")
         for doc in hits:
             train_crossing = datetime.datetime.fromtimestamp(
                 int(doc["fields"]["date"][0]) / 1000, tz=datetime.timezone.utc)
