@@ -1,3 +1,12 @@
+- name: Append year and week to destination folder
+  shell: date +%Y_%W
+  register: year_week
+  delegate_to: localhost
+- name: Creates directory
+  file:
+    path: '{{ destination }}{{ year_week.stdout }}'
+    state: directory
+  delegate_to: localhost
 - name: Launch rsync to fetch noisesensor data json files
   hosts: rpi
   become: false
@@ -6,29 +15,15 @@
     source2: '/home/pi/noisesensor/outsd/'
     destination: '/home/semaphore/data/to_process/'
   tasks:
-  - name: get current RX
-    shell: /usr/sbin/ifconfig tun0 | grep "RX packets" | awk '{print $5}'
-    register: rx_bytes
-  - name: get current TX
-    shell: /usr/sbin/ifconfig tun0 | grep "TX packets" | awk '{print $5}'
-    register: tx_bytes
-  - name: Append year and week to destination folder
-    shell: date +%Y_%W
-    register: year_week
-    delegate_to: localhost
-  - name: rsync installed
-    ansible.builtin.package:
-      name: rsync
-      state: present
-    become: true
+#  - name: get current RX
+#    shell: /usr/sbin/ifconfig tun0 | grep "RX packets" | awk '{print $5}'
+#    register: rx_bytes
+#  - name: get current TX
+#    shell: /usr/sbin/ifconfig tun0 | grep "TX packets" | awk '{print $5}'
+#    register: tx_bytes
   - name: fetch RPI eth0 mac address
     ansible.builtin.shell: /usr/sbin/ifconfig eth0 2>/dev/null|awk '/ether/ {print $2}'|sed 's/://g'
     register: rpi_mac
-  - name: Creates directory
-    file:
-      path: '{{ destination }}{{ year_week.stdout }}'
-      state: directory
-    delegate_to: localhost
   - name: data synchronization
     vars:
       ansible_remote_tmp: /run/user/1000
@@ -42,10 +37,6 @@
         - "--exclude='*.tmp'"
         - "--stats"
     register: rsync_stats
-  - name: Creates temp directory
-    ansible.builtin.file:
-      path: '{{ source2 }}'
-      state: directory        
   - name: data synchronization
     ansible.posix.synchronize:
       mode: 'pull'
@@ -54,12 +45,13 @@
       rsync_opts:
         - "--remove-source-files"
         - "--exclude='*.tmp'"
-  - name: get new RX
-    shell: /usr/sbin/ifconfig tun0 | grep "RX packets" | awk '{print $5}'
-    register: rx_bytes_end
-  - name: get new TX
-    shell: /usr/sbin/ifconfig tun0 | grep "TX packets" | awk '{print $5}'
-    register: tx_bytes_end
-  - name: Print used bandwidth
-    debug:
-      msg: "Ansible task consumed data: RX {{ ((rx_bytes_end.stdout | int)-(rx_bytes.stdout | int)) | human_readable }} TX {{ ((tx_bytes_end.stdout | int)-(tx_bytes.stdout | int)) | human_readable }}\n{{ rsync_stats.stdout_lines | join('\n') }} "
+        - "--ignore-missing-args"
+#  - name: get new RX
+#    shell: /usr/sbin/ifconfig tun0 | grep "RX packets" | awk '{print $5}'
+#    register: rx_bytes_end
+#  - name: get new TX
+#    shell: /usr/sbin/ifconfig tun0 | grep "TX packets" | awk '{print $5}'
+#    register: tx_bytes_end
+#  - name: Print used bandwidth
+#    debug:
+#      msg: "Ansible task consumed data: RX {{ ((rx_bytes_end.stdout | int)-(rx_bytes.stdout | int)) | human_readable }} TX {{ ((tx_bytes_end.stdout | int)-(tx_bytes.stdout | int)) | human_readable }}\n{{ rsync_stats.stdout_lines | join('\n') }} "
