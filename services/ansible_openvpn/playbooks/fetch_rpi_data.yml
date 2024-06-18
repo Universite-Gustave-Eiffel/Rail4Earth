@@ -1,12 +1,14 @@
-- name: Append year and week to destination folder
-  shell: date +%Y_%W
-  register: year_week
-  delegate_to: localhost
-- name: Creates directory
-  file:
-    path: '{{ destination }}{{ year_week.stdout }}'
-    state: directory
-  delegate_to: localhost
+- name: Launch rsync to fetch noisesensor data json files
+  hosts: localhost
+  connection: local
+  tasks:
+  - name: Append year and week to destination folder
+    shell: date +%Y_%W
+    register: year_week
+  - name: Creates directory
+    file:
+      path: '{{ destination }}{{ year_week.stdout }}'
+      state: directory
 - name: Launch rsync to fetch noisesensor data json files
   hosts: rpi
   become: false
