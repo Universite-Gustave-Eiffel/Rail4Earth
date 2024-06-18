@@ -1,15 +1,4 @@
 - name: Launch rsync to fetch noisesensor data json files
-  hosts: localhost
-  connection: local
-  tasks:
-  - name: Append year and week to destination folder
-    shell: date +%Y_%W
-    register: year_week
-  - name: Creates directory
-    file:
-      path: '{{ destination }}{{ year_week.stdout }}'
-      state: directory
-- name: Launch rsync to fetch noisesensor data json files
   hosts: rpi
   become: false
   vars:
@@ -23,9 +12,18 @@
 #  - name: get current TX
 #    shell: /usr/sbin/ifconfig tun0 | grep "TX packets" | awk '{print $5}'
 #    register: tx_bytes
+  - name: Append year and week to destination folder
+    shell: date +%Y_%W
+    register: year_week
+    delegate_to: localhost
   - name: fetch RPI eth0 mac address
     ansible.builtin.shell: /usr/sbin/ifconfig eth0 2>/dev/null|awk '/ether/ {print $2}'|sed 's/://g'
     register: rpi_mac
+  - name: Creates directory
+    file:
+      path: '{{ destination }}{{ year_week.stdout }}'
+      state: directory
+    delegate_to: localhost
   - name: data synchronization
     vars:
       ansible_remote_tmp: /run/user/1000
@@ -48,6 +46,10 @@
         - "--remove-source-files"
         - "--exclude='*.tmp'"
         - "--ignore-missing-args"
+  - name: Print stats
+    debug:
+      msg: "Ansible task {{ rsync_stats.stdout_lines | join('\n') }} "
+
 #  - name: get new RX
 #    shell: /usr/sbin/ifconfig tun0 | grep "RX packets" | awk '{print $5}'
 #    register: rx_bytes_end
