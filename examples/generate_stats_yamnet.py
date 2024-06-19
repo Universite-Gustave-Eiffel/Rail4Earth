@@ -96,7 +96,8 @@ def main():
                       (start_epoch, end_epoch, hwa))
             percentile = result_indicators["rows"][0][0]
             if percentile:
-                print("%s,%s,%.2f" % (hwa, train_crossing.astimezone().isoformat(timespec="seconds"), percentile))
+                print("%s,%s,%.2f" % (
+                    hwa, train_crossing.astimezone().isoformat(timespec="seconds"), percentile))
                 search_after = doc["sort"]
 
 
