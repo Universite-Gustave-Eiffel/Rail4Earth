@@ -57,6 +57,12 @@ def main():
                         default="sensor_yamnet_*", type=str)
     parser.add_argument("--ignore_certs",
                         help="Do not verify certificate", default=False, action="store_true")
+    parser.add_argument("--start_epoch_millis",
+                        help="Fetch yamnet trigger from this epoch in milliseconds",
+                        default=0, type=int)
+    parser.add_argument("--end_epoch_millis",
+                        help="Fetch yamnet trigger to this epoch in milliseconds",
+                        default=32518307895000, type=int)
     args = parser.parse_args()
     configuration = json.load(open(args.api_path, "r"))
     client = elasticsearch.Elasticsearch(
@@ -71,7 +77,9 @@ def main():
     while True:
         result = client.search(index=args.yamnet_index, _source=False,
                                fields=[{"field": "date", "format": "epoch_millis"}, "hwa"],
-                               sort=[{"date": {"order": "desc"}}], search_after=search_after)
+                               sort=[{"date": {"order": "desc"}}], search_after=search_after,
+                               query={"range": {"date": {"gte": args.start_epoch_millis,
+                                                         "lte": args.end_epoch_millis}}})
         hits = result["hits"]["hits"]
         if len(hits) == 0:
             break
@@ -79,36 +87,14 @@ def main():
             train_crossing = datetime.datetime.fromtimestamp(
                 int(doc["fields"]["date"][0]) / 1000, tz=datetime.timezone.utc)
             hwa = doc["fields"]["hwa"][0]
-            query_indicators = {
-                "bool": {
-                    "must": [
-                        {
-                            "range": {
-                                "date_start": {
-                                    "gte": int((train_crossing.timestamp() - 30) * 1000)
-                                }
-                            }
-                        },
-                        {
-                            "range": {
-                                "date_end": {
-                                    "lte": int((train_crossing.timestamp() + 30) * 1000)
-                                }
-                            }
-                        },
-                        {
-                          "match": {
-                            "hwa": hwa
-                          }
-                        }
-                    ]
-                }
-            }
-            query_aggregate = {"l10": {"percentiles": {"field": "LZeq", "percents": [90]}}}
-            result_indicators = client.search(index="sensor_indicators_*", size=0,
-                                              query=query_indicators,
-                                              aggs=query_aggregate)
-            percentile = result_indicators["aggregations"]["l10"]["values"]["90.0"]
+            start_epoch = int((train_crossing.timestamp() - 30) * 1000)
+            end_epoch = int((train_crossing.timestamp() + 30) * 1000)
+            result_indicators = client.sql.query(
+                query="SELECT percentile(LZeq-94+sensitivity, 90) p90 "
+                      "from \"sensor_indicators_*\" "
+                      "where date_start > %d and date_end < %d and hwa = '%s'" %
+                      (start_epoch, end_epoch, hwa))
+            percentile = result_indicators["rows"][0][0]
             if percentile:
                 print("%s,%s,%.2f" % (hwa, train_crossing.astimezone().isoformat(timespec="seconds"), percentile))
                 search_after = doc["sort"]
