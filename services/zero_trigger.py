@@ -229,6 +229,8 @@ class TriggerProcessor:
     def init_socket(self):
         context = zmq.Context()
         self.socket = context.socket(zmq.SUB)
+        if self.config.zmq_audio_buffer_size > 0:
+            self.socket.setsockopt(zmq.RCVBUF, self.config.zmq_audio_buffer_size)
         self.socket.connect(self.config.input_address)
         self.socket.subscribe("")
         self.socket_out_recording = context.socket(zmq.PUB)
@@ -651,6 +653,8 @@ if __name__ == "__main__":
                         default="~/.ssh/id_rsa.pub")
     parser.add_argument("--input_address", help="Address for zero_record samples",
                         default="tcp://127.0.0.1:10001")
+    parser.add_argument("--zmq_audio_buffer_size", help="ZMQ audio buffer size. 0 (default) means using default OS value",
+                        default=0, type=int)
     parser.add_argument("--output_address_recordings",
                         help="Address for publishing JSON of sound recordings",
                         default="tcp://*:10002")

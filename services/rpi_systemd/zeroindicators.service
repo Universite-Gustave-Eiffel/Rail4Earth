@@ -4,11 +4,12 @@ Requires=zerorecord.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3.9 -u /home/pi/noisesensor/services/zero_indicators.py -c services/rpi_systemd/zeroindicators_config.json -w 0.125 -s 80 --data_file /home/pi/zeroindicators.json
+ExecStart=/usr/bin/python3.9 -u /home/pi/noisesensor/services/zero_indicators.py -c services/rpi_systemd/zeroindicators_config.json -w 0.125 -s 80 --input_address "ipc:///tmp/audio" --data_file /home/pi/zeroindicators.json
 WorkingDirectory=/home/pi/noisesensor/
 Restart=always
 RestartSec=5s
 User=pi
+CPUAffinity=1 2 3
 
 [Install]
 WantedBy=multi-user.target

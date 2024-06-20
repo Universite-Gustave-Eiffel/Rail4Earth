@@ -4,11 +4,13 @@ After=time-sync.target
 
 [Service]
 Type=simple
-ExecStart=/bin/sh -c '/usr/bin/arecord --buffer-time=125000 --disable-resample --disable-softvol -D $(arecord -L | grep -m1 plughw) -r 48000 -f FLOAT_LE -c 1 -t raw | /usr/bin/python3.9 -u /home/pi/noisesensor/services/zero_record.py -p 10001 -b 24000 -i "*" --delay_print_rate 30'
+ExecStart=/bin/sh -c '/usr/bin/arecord --buffer-time=125000 --disable-resample --disable-softvol -D $(arecord -L | grep -m1 plughw) -r 48000 -f FLOAT_LE -c 1 -t raw | /usr/bin/python3.9 -u /home/pi/noisesensor/services/zero_record.py -a "ipc:///tmp/audio" -b 24000 --delay_print_rate 30 --zmq_audio_buffer_size 1920000'
 WorkingDirectory=/home/pi/noisesensor/
 Restart=always
 RestartSec=5s
 User=pi
+Nice=-1
+CPUAffinity=0
 
 [Install]
 WantedBy=multi-user.target
