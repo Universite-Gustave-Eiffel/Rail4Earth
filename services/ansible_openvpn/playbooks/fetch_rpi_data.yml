@@ -31,7 +31,7 @@
       mode: 'pull'
       src: '{{ source }}'
       dest: '{{ destination }}{{ year_week.stdout }}/{{ rpi_mac.stdout }}'
-      rsync_timeout: 10
+      rsync_timeout: 900
       rsync_opts:
         - "--remove-source-files"
         - "--exclude='*.tmp'"
