@@ -25,8 +25,6 @@
       state: directory
     delegate_to: localhost
   - name: data synchronization out mem
-    async: 900
-    poll: 5
     vars:
       ansible_remote_tmp: /run/user/1000
     ansible.posix.synchronize:
@@ -40,8 +38,6 @@
         - "--stats"
     register: rsync_stats
   - name: data synchronization out sd
-    async: 900
-    poll: 5
     ansible.posix.synchronize:
       mode: 'pull'
       src: '{{ source2 }}'
