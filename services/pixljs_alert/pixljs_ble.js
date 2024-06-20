@@ -24,7 +24,6 @@ var rssi = -100;
 let lastSeen = Date(0);
 const MODE_SWITCH_MILLI = 2000;
 const TIMEOUT_RPI = 15000;
-var button_watch = [0, 0, 0, 0];
 var timeout_switch = 0;
 var timeout_buzzer = 0;
 var timeout_reset = 0;
@@ -55,37 +54,28 @@ Graphics.prototype.setFontPixeloidSans = function(scale) {
 g.setFontPixeloidSans(1);
 
 function disableButtons() {
-  for (id = 0; id < 4; id++) {
-    if (button_watch[id] > 0) {
-      try {
-        clearWatch(button_watch[id]);
-      } catch (e) {
-        //ignore
-      }
-    }
-    button_watch[id] = 0;
-  }
+  clearWatch();
 }
 
 function watchIdleButtons() {
   disableButtons();
   setTimeout(e => {
-    button_watch[0] = setWatch(onPressButtonInstallMode, BTN1, {
+    setWatch(onPressButtonInstallMode, BTN1, {
       repeat: true,
       edge: 'both',
       debounce: 100
     });
-    button_watch[3] = setWatch(onPressButtonTrainDemo, BTN4, {
+    setWatch(onPressButtonTrainDemo, BTN4, {
       repeat: true,
       edge: 'both',
       debounce: 100
     });
-    button_watch[2] = setWatch(screenIdle, BTN3, {
+    setWatch(screenIdle, BTN3, {
       repeat: false,
       edge: 'falling',
       debounce: 10
     });
-    button_watch[1] = setWatch(screenIdle, BTN2, {
+    setWatch(screenIdle, BTN2, {
       repeat: false,
       edge: 'falling',
       debounce: 10
@@ -110,7 +100,7 @@ function switchStateInstall(newMode) {
     Pixl.setLCDPower(true);
     LED.write(1);
     disableButtons();
-    button_watch[0] = setWatch(e => {switchStateInstall(0);}, BTN1, {
+    setWatch(e => {switchStateInstall(0);}, BTN1, {
       repeat: false,
       debounce: 10
     });
@@ -273,21 +263,21 @@ function screenQuestionB() {
   sliderValue = 5;
   disableButtons();
   questionBDrawScreen();
-  button_watch[3] = setWatch(e => {
+  setWatch(e => {
     sliderValue = Math.max(0, sliderValue - 1);
     questionBDrawScreen();
   }, BTN4, {
     repeat: true,
     edge: 'rising'
   });
-  button_watch[2] = setWatch(e => {
+  setWatch(e => {
     sliderValue = Math.min(10, sliderValue + 1);
     questionBDrawScreen();
   }, BTN3, {
     repeat: true,
     edge: 'rising'
   });
-  button_watch[1] = setWatch(e => {
+  setWatch(e => {
     recordAnswer('B', sliderValue);
     onQuestionCE(0);
   }, BTN2, {
@@ -327,21 +317,21 @@ function onQuestionCE(index) {
   answer_index = parseInt(QUESTIONS[questionIndex][1].length / 2); // default mid answer
   disableButtons();
   questionCEDrawScreen();
-  button_watch[3] = setWatch(e => {
+  setWatch(e => {
     answer_index = Math.max(0, answer_index - 1);
     questionCEDrawScreen();
   }, BTN4, {
     repeat: true,
     edge: 'rising'
   });
-  button_watch[2] = setWatch(e => {
+  setWatch(e => {
     answer_index = Math.min(QUESTIONS[questionIndex][1].length - 1, answer_index + 1);
     questionCEDrawScreen();
   }, BTN3, {
     repeat: true,
     edge: 'rising'
   });
-  button_watch[1] = setWatch(e => {
+  setWatch(e => {
     recordAnswer(String.fromCharCode(67 + questionIndex), QUESTIONS[questionIndex][1][answer_index]);
     if (questionIndex + 1 < QUESTIONS.length) {
       onQuestionCE(questionIndex + 1);
@@ -365,12 +355,8 @@ function endForm() {
   g.setFontAlign(0.5, 0.5);
   g.drawString("Merci pour votre réponse\nAu prochain passage !", g.getWidth() / 2, g.getHeight() / 2);
   g.flip();
-  setTimeout(e => {
-    Pixl.setLCDPower(false);
-    LED.write(0);
-    watchIdleButtons();
-  }, 5000);
   mode = 0;
+  installResetTimeout()
   updateAdvertisement();
 }
 
@@ -427,12 +413,12 @@ function screenQuestionA() {
   g.flip();
   disableButtons();
   setTimeout(e => {
-  button_watch[0] = setWatch(onClickSnooze, BTN1, {
+  setWatch(onClickSnooze, BTN1, {
     repeat: false,
     edge: 'rising',
     debounce: 10
   });
-  button_watch[2] = setWatch(function() {
+  setWatch(function() {
     stopAlarm();
     recordAnswer('A', 'non');
     onQuestionCE(0);
@@ -441,7 +427,7 @@ function screenQuestionA() {
     edge: 'rising',
     debounce: 10
   });
-  button_watch[3] = setWatch(function() {
+  setWatch(function() {
     stopAlarm();
     recordAnswer('A', 'oui');
     screenQuestionB();
@@ -455,17 +441,17 @@ function screenQuestionA() {
 
 function screenIdle() {
   disableButtons();
-  button_watch[0] = setWatch(onPressButtonInstallMode, BTN1, {
+  setWatch(onPressButtonInstallMode, BTN1, {
     repeat: true,
     edge: 'both',
     debounce: 10
   });
-  button_watch[3] = setWatch(onPressButtonTrainDemo, BTN4, {
+  setWatch(onPressButtonTrainDemo, BTN4, {
     repeat: true,
     edge: 'both',
     debounce: 10
   });
-  button_watch[1] = setWatch(e => {
+  setWatch(e => {
     mode = 2;
     currentForm = [];
     trainCrossingTime = Date();
@@ -488,7 +474,7 @@ function screenIdle() {
     if(remainSnooze>=3600)
       text += parseInt(remainSnooze / 3600) + "h";
     text += parseInt((remainSnooze % 3600)/60) + "m de veille.\nRéactiver le boitier>";
-    button_watch[2] = setWatch(e => {
+    setWatch(e => {
       snooze_time = 0;
       screenIdle();
     }, BTN3, {
@@ -497,7 +483,7 @@ function screenIdle() {
       debounce: 10
     });
   } else {
-    button_watch[2] = setWatch(onClickSnooze, BTN3, {
+    setWatch(onClickSnooze, BTN3, {
       repeat: false,
       edge: 'rising',
       debounce: 10
