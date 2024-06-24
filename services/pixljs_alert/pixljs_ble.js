@@ -1,5 +1,5 @@
 // force timezone to UTC+0200
-const CODE_VERSION=2;
+const CODE_VERSION=3;
 E.setTimeZone(2);
 const BUZZING_TIME = 60000; // buzzer time ms
 const RESET_NO_ANSWER = 60000;
@@ -94,6 +94,14 @@ function updateAdvertisement() {
 }
 
 function switchStateInstall(newMode) {
+  if(mode==2) {
+    formStack.push(JSON.stringify(Object.fromEntries([
+      ["trainCrossingTime", trainCrossingTime],
+      ["timeout", true],
+      ["version", CODE_VERSION],
+      ["answers", Object.fromEntries(currentForm)]
+    ])));
+  }
   mode = newMode;
   updateAdvertisement();
   if(mode==1) {
@@ -347,6 +355,8 @@ function onQuestionCE(index) {
 function endForm() {
   formStack.push(JSON.stringify(Object.fromEntries([
     ["trainCrossingTime", trainCrossingTime],
+    ["timeout", false],
+    ["version", CODE_VERSION],
     ["answers", Object.fromEntries(currentForm)]
   ])));
   disableButtons();
