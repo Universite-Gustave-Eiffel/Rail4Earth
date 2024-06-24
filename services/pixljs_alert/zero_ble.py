@@ -18,12 +18,15 @@ from urllib.request import urlopen
 import fcntl
 import socket
 import struct
+import re
+import base64
 
 UART_SERVICE_UUID = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
 UART_RX_CHAR_UUID = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
 UART_TX_CHAR_UUID = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
 SERVICE_MODE = "0000183b-0000-1000-8000-00805f9b34fb"
 SERVICE_ANSWER_SIZE = "0000180a-0000-1000-8000-00805f9b34fb"
+SERVICE_VERSION = "0000180b-0000-1000-8000-00805f9b34fb"
 FILE_URI = "file://"
 logger = logging.getLogger(__name__)
 
@@ -36,11 +39,6 @@ def get_hw_address(interface_name):
         return ''.join('%02x' % b for b in info[18:24])
     except OSError:
         return ""
-
-
-def uart_data_received(_: BleakGATTCharacteristic, data: bytearray):
-    decoded = data.decode('UTF-8')
-    logger.info(decoded)
 
 
 def slice_bytes(data: bytes, n: int):
@@ -95,13 +93,13 @@ class BleTrackingDaemon:
         self.known_devices[device.address] = time.time()
 
     def stop(self, sig, frame):
+        # stop main process
+        self.t.set()
         logger.warning("Interrupted by %d, shutting down" % sig)
         self.running = False
         for k, v in self.known_devices.items():
             self.reports[k]["lastSeen"] = time_to_iso(v)
             self.socket_out_lost.send_json(self.reports[k])
-        # stop main process
-        self.t.set()
 
     def run(self):
         self.t.wait(2)
@@ -134,7 +132,7 @@ class ScanResult:
         self.ble_tracking = ble_tracking
 
     def callback(self, d, advertising_data):
-        if d.name and "Pixl." in d.name and SERVICE_MODE in advertising_data.service_data:
+        if d.name and "Pixl." in d.name:
             self.device = d
             self.ble_tracking.on_found_device(d)
             self.advertising_data = advertising_data
@@ -171,6 +169,25 @@ def process_message(socket, config, agenda):
     return ""
 
 
+def fetch_script_source_and_version():
+    uart_commands = []
+    chunk_size = 1024
+    source_version = None
+    with open(os.path.join(os.path.dirname(__file__), "pixljs_ble.js"), "r") as f:
+        code = f.read()
+        g = re.search(r'CODE_VERSION=(\d+)', code)
+        code_bytes = code.encode("iso-8859-1")
+        if g:
+            source_version = int(g.group(1))
+        uart_commands.append("require(\"Storage\").write(\"%s\",atob(\"%s\"),%d,%d);" % (
+            ".bootcde", base64.b64encode(code_bytes[:chunk_size]).decode("UTF8"), 0, len(code_bytes)))
+        for i in range(chunk_size, len(code_bytes), chunk_size):
+            uart_commands.append("require(\"Storage\").write(\"%s\",atob(\"%s\"),%d);" % (
+                ".bootcde", base64.b64encode(code_bytes[i:i + chunk_size]).decode("UTF8"), i))
+        code = "\n".join(uart_commands)+"\nload();\n"
+    return code.encode("iso-8859-1"), source_version
+
+
 async def main(config):
     # agenda example
     agenda = {
@@ -187,8 +204,11 @@ async def main(config):
     socket_out_lost.bind(config.output_address_lost)
     ble_tracking = BleTrackingDaemon(socket_out_lost, t)
     # json file can be local file ex: "file:///tmp/agenda.json"
-    agenda_url = "https://dashboard.raw.noise-planet.org/api/agenda/"+get_hw_address("eth0")
+    agenda_url = "https://dashboard.raw.noise-planet.org/api/agenda/" + get_hw_address("eth0")
     agenda_update = AgendaUpdateDaemon(agenda_url, t, agenda)
+    # fetch expected pixl.js source code
+    code, source_version = fetch_script_source_and_version()
+    doing_upgrade = False
     # will kill when program end
     ble_tracking_thread = Thread(target=ble_tracking.run, daemon=True)
     ble_tracking_thread.start()
@@ -203,13 +223,24 @@ async def main(config):
         scan_result = ScanResult(stop_event, ble_tracking)
         async with BleakScanner(scan_result.callback) as scanner:
             await stop_event.wait()
-        mode = scan_result.advertising_data.service_data[SERVICE_MODE].decode("ascii")
-        answer_stack = int.from_bytes(scan_result.advertising_data.service_data[SERVICE_ANSWER_SIZE]
+        if SERVICE_MODE in scan_result.advertising_data.service_data:
+            mode = scan_result.advertising_data.service_data[SERVICE_MODE].decode("ascii")
+        else:
+            mode = 0
+        if SERVICE_ANSWER_SIZE in scan_result.advertising_data.service_data:
+            answer_stack = int.from_bytes(scan_result.advertising_data.service_data[SERVICE_ANSWER_SIZE]
+                                          , byteorder="big")
+        else:
+            answer_stack = 0
+        if SERVICE_VERSION in scan_result.advertising_data.service_data:
+            code_version = int.from_bytes(scan_result.advertising_data.service_data[SERVICE_VERSION]
                                       , byteorder="big")
+        else:
+            code_version = 0
         if mode == "install":
             try:
                 async with BleakClient(scan_result.device) as client:
-                    await client.start_notify(UART_TX_CHAR_UUID, uart_data_received)
+                    await client.start_notify(UART_TX_CHAR_UUID, scan_result.uart_data_received)
                     nus = client.services.get_service(UART_SERVICE_UUID)
                     rx_char = nus.get_characteristic(UART_RX_CHAR_UUID)
                     now = time.time()
@@ -255,17 +286,36 @@ async def main(config):
             except (BleakError, asyncio.TimeoutError) as e:
                 logger.error("Send data error", e)
         else:
-            c = process_message(socket, config, agenda)
+            if source_version == code_version:
+                c = process_message(socket, config, agenda)
+            else:
+                c = code
+                doing_upgrade = True
+                print("Sending new version of Pixl.js source code to %s" %
+                      scan_result.device.address)
             tries = 0
             while c:
                 try:
                     async with BleakClient(scan_result.device) as client:
-                        await client.start_notify(UART_TX_CHAR_UUID, uart_data_received)
+                        await client.start_notify(UART_TX_CHAR_UUID, scan_result.uart_data_received)
                         nus = client.services.get_service(UART_SERVICE_UUID)
                         rx_char = nus.get_characteristic(UART_RX_CHAR_UUID)
                         for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
                             await client.write_gatt_char(rx_char, buffer, False)
+                            # wait for end transfer
+                            await asyncio.sleep(0.05)
+                            while time.time() - scan_result.received_data_time < 0.1:
+                                await asyncio.sleep(0.05)
                         c = ""
+                        try:
+                            output = scan_result.received_data.getvalue().decode("iso-8859-1")
+                            scan_result.received_data = io.BytesIO()
+                            print(output)
+                        except UnicodeDecodeError as e:
+                            pass
+                        if doing_upgrade:
+                            await asyncio.sleep(10.0)
+                            doing_upgrade = False
                 except (BleakError, asyncio.TimeoutError) as e:
                     tries += 1
                     logger.error("Send data error", e)

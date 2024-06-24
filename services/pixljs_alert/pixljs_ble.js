@@ -1,5 +1,5 @@
 // force timezone to UTC+0200
-const CODE_VERSION=1;
+const CODE_VERSION=2;
 E.setTimeZone(2);
 const BUZZING_TIME = 60000; // buzzer time ms
 const RESET_NO_ANSWER = 60000;
