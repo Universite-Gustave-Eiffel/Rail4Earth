@@ -302,8 +302,8 @@ class TriggerProcessor:
 
         for tag_i in tags_indexes:
             tag_name = self.yamnet_classes[0][tag_i]
-            tag_score = prediction[tag_i]
-            tag_order = 521 - np.max(np.where(ordered_scores==tag_i)[1])
+            tag_score = float(prediction[tag_i])
+            tag_order = int(521 - np.max(np.where(ordered_scores==tag_i)[1]))
             document_scores.update({tag_name: tag_score})
             document_orders.update({tag_name: tag_order})
 
@@ -689,10 +689,21 @@ if __name__ == "__main__":
             action.required = True
         args = parser.parse_args()
     else:
-        with open(args.configuration_file, "r") as fp:
-            print("Load configuration file " + args.configuration_file)
-            cfg = json.load(fp)
-            args = types.SimpleNamespace(**(vars(args) | cfg))
+        from pathlib import Path
+        os.makedirs(Path.home() / ".noisesensor", exist_ok=True)
+        home_config_path = Path.home() / ".noisesensor" / "zerotrigger_config.json"
+        if home_config_path.exists():
+            print("Load configuration file " + str(home_config_path))
+            with open(home_config_path, "r") as fp:
+                cfg = json.load(fp)
+                args = types.SimpleNamespace(**(vars(args) | cfg))
+        else:
+            config_file_path = Path(args.configuration_file)
+            os.symlink(config_file_path.absolute(), home_config_path)
+            with open(config_file_path, "r") as fp:
+                print("Load configuration file " + args.configuration_file)
+                cfg = json.load(fp)
+                args = types.SimpleNamespace(**(vars(args) | cfg))
     print("Configuration:\n" + json.dumps(vars(args),
                                           sort_keys=False, indent=2))
     trigger = TriggerProcessor(args)
