@@ -53,6 +53,9 @@ def epoch_to_elasticsearch_date(epoch):
 
 def fetch_data(args):
     for root, dirs, files in os.walk(args.json_input_folder):
+        # ignore partially transferred files of rsync (will be re-downloaded/completed later)
+        if ".~tmp~" in dirs:
+            continue
         for name in files:
             file_path = os.path.join(root, name)
             if name.endswith(".json.gz"):
