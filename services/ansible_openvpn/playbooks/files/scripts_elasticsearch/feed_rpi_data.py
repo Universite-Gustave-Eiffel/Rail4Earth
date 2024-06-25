@@ -65,6 +65,9 @@ def fetch_data(args):
                             try:
                                 json_dict = json.loads(line)
                                 if "_index" not in json_dict:
+                                    if "_source" not in json_dict:
+                                        source_doc = json_dict
+                                        json_dict = {"_source": source_doc}
                                     # must create index as it is not specified in the
                                     # document
                                     epoch = os.path.getmtime(file_path)
