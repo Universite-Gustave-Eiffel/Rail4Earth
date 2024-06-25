@@ -89,6 +89,8 @@ def fetch_data(args):
                                     json_dict["_id"] = base64.b64encode(
                                         hashlib.sha256(line).digest()).decode(
                                         sys.getdefaultencoding())
+                                if "_op_type" not in json_dict:
+                                    json_dict["_op_type"] = "create"
                                 yield json_dict
                                 processed_documents += 1
                             except json.decoder.JSONDecodeError:
