@@ -113,7 +113,9 @@ def fetch_data(args):
                         os.makedirs(parent_dir_destination)
                     os.rename(file_path, destination)
                     if args.verbose:
-                        print("Processed %d documents, now move %s to %s" %(processed_documents, file_path, destination))
+                        print("Processed %d documents, now move %s to %s" % (processed_documents,
+                                                                             file_path,
+                                                                             destination))
 
 
 def main():
@@ -181,7 +183,8 @@ def main():
     successes = 0
     try:
         for ok, action in streaming_bulk(client=client,
-                                         actions=fetch_data(args)):
+                                         actions=fetch_data(args),
+                                         ignore_status=[409]):
             successes += ok
     except elasticsearch.helpers.BulkIndexError as e:
         print(e, file=sys.stderr)
