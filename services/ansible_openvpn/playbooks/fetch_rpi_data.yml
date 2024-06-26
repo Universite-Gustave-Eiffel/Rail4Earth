@@ -32,6 +32,7 @@
       src: '{{ source }}'
       dest: '{{ destination }}{{ year_week.stdout }}/{{ rpi_mac.stdout }}'
       rsync_timeout: 30
+      partial: true
       rsync_opts:
         - "--remove-source-files"
         - "--exclude='*.tmp'"
@@ -43,6 +44,7 @@
       src: '{{ source2 }}'
       dest: '{{ destination }}{{ year_week.stdout }}/{{ rpi_mac.stdout }}'
       rsync_timeout: 30
+      partial: true
       rsync_opts:
         - "--remove-source-files"
         - "--exclude='*.tmp'"
