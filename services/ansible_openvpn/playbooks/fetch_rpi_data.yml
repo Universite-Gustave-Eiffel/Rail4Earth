@@ -33,11 +33,11 @@
       src: '{{ source }}'
       dest: '{{ destination }}{{ year_week.stdout }}/{{ rpi_mac.stdout }}'
       rsync_timeout: 30
-      partial: true
       rsync_opts:
         - "--remove-source-files"
         - "--exclude='*.tmp'"
         - "--stats"
+        - "--partial-dir=.rsync-partial"
     register: rsync_stats
   - name: data synchronization out sd
     ansible.posix.synchronize:
@@ -45,11 +45,11 @@
       src: '{{ source2 }}'
       dest: '{{ destination }}{{ year_week.stdout }}/{{ rpi_mac.stdout }}'
       rsync_timeout: 30
-      partial: true
       rsync_opts:
         - "--remove-source-files"
         - "--exclude='*.tmp'"
         - "--ignore-missing-args"
+        - "--partial-dir=.rsync-partial"
   - name: Print stats
     debug:
       msg: "Ansible task {{ rsync_stats.stdout_lines | join('\n') }} "
