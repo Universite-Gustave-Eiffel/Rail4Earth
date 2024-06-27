@@ -36,7 +36,7 @@
     poll: 5
     register: rpi_mac
   - name: data synchronization out mem
-    when: rpi_mac.std_out not in disabled_sync
+    when: 'rpi_mac.std_out not in disabled_sync'
     vars:
       ansible_remote_tmp: /run/user/1000
     ansible.posix.synchronize:
@@ -51,7 +51,7 @@
         - "--partial-dir=.rsync-partial"
     register: rsync_stats
   - name: data synchronization out sd
-    when: rpi_mac.std_out not in disabled_sync
+    when: 'rpi_mac.std_out not in disabled_sync'
     ansible.posix.synchronize:
       mode: 'pull'
       src: '{{ source2 }}'
