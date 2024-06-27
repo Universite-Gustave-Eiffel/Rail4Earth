@@ -50,6 +50,19 @@
         - "--stats"
         - "--partial-dir=.rsync-partial"
     register: rsync_stats
+  - name: data synchronization (exclude audio) for slow bandwidth rpi
+    when: rpi_mac.stdout in disabled_sync
+    ansible.posix.synchronize:
+      mode: 'pull'
+      src: '{{ source2 }}'
+      dest: '{{ destination }}{{ year_week.stdout }}/{{ rpi_mac.stdout }}'
+      rsync_timeout: 30
+      rsync_opts:
+        - "--remove-source-files"
+        - "--exclude='*.tmp'"
+        - "--exclude='yamnet_*'"
+        - "--ignore-missing-args"
+        - "--partial-dir=.rsync-partial"
   - name: data synchronization out sd
     when: rpi_mac.stdout not in disabled_sync
     ansible.posix.synchronize:
@@ -63,6 +76,7 @@
         - "--ignore-missing-args"
         - "--partial-dir=.rsync-partial"
   - name: Print stats
+    when: rpi_mac.stdout not in disabled_sync
     debug:
       msg: "Ansible task {{ rsync_stats.stdout_lines | join('\n') }} "
 
