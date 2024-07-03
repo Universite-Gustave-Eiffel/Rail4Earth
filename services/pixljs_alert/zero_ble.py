@@ -99,7 +99,16 @@ def get_rpi_status():
         mic_out = subprocess.check_output(("arecord", "-L"), timeout=1)
         for line in mic_out.decode("utf8").splitlines():
             if "plughw" in line:
-                mic = line
+                calibration_file = "/home/pi/zeroindicators.json"
+                sensitivity = "NO CALIB"
+                try:
+                    if os.path.exists(calibration_file):
+                        with open(calibration_file, "r") as calib:
+                            json_doc = json.load(calib)
+                            sensitivity = "%.2f dBFS@94dB" % json_doc["sensitivity"]
+                except json.JSONDecodeError as e:
+                    pass
+                mic = "OK (%s)" % sensitivity
                 break
     except subprocess.CalledProcessError as e:
         pass
