@@ -100,7 +100,7 @@ def get_rpi_status():
         for result in client.dict_stream(convert_datetime=True, filter=["TPV"]):
             gpdsdout = "%.5s %.5s" % (result.get("lat", "n/a"), result.get("lon", "n/a"))
             break
-    rpi_status = "Mic: %.20s\\nVpn: %.20s\\nBat: %.20s\\nGps: %.20s" % (mic, vpn, battery, gpdsdout)
+    rpi_status = "Mic: %.25s\\nVpn: %.25s\\nBat: %.25s\\nGps: %.25s" % (mic, vpn, battery, gpdsdout)
     return rpi_status.encode("iso-8859-1")
 
 
