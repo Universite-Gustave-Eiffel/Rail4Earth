@@ -343,7 +343,9 @@ async def main(config):
                         await client.start_notify(UART_TX_CHAR_UUID, scan_result.uart_data_received)
                         nus = client.services.get_service(UART_SERVICE_UUID)
                         rx_char = nus.get_characteristic(UART_RX_CHAR_UUID)
-                        for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
+                        chunks = slice_bytes(c, rx_char.max_write_without_response_size)
+                        for chunk_index, buffer in enumerate(chunks):
+                            print("Sending %d/%d" % (chunk_index+1, len(chunks)))
                             await client.write_gatt_char(rx_char, buffer, False)
                             scan_result.received_data_time = time.time()
                             # wait for end transfer
