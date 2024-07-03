@@ -116,7 +116,6 @@ function switchStateInstall(newMode) {
   mode = newMode;
   updateAdvertisement();
   if(mode==1) {
-    var rpi_status = "";
     Pixl.setLCDPower(true);
     LED.write(1);
     disableButtons();
@@ -208,6 +207,7 @@ function installScreen() {
     let diff = Date().valueOf() - lastSeen.valueOf();
     if (diff > TIMEOUT_RPI) {
       text += "No Rpi Connection";
+      rpi_status = "";
     } else {
       text += parseInt(diff / 1000) + " s à " + rssi + " dB (" + rssiPowerHint() + ")";
     }
