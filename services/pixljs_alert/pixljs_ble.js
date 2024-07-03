@@ -225,7 +225,7 @@ function onPressButtonInstallMode() {
   }
   let state = digitalRead(BTN1);
   if (state) {
-    timeout_switch = setTimeout(switchStateInstall, MODE_SWITCH_MILLI, !mode);
+    timeout_switch = setTimeout(switchStateInstall, MODE_SWITCH_MILLI, 1);
   } else {
     if(mode==0) {
       screenIdle();
