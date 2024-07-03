@@ -53,7 +53,6 @@ Graphics.prototype.setFontPixeloidSans = function(scale) {
   );
 };
 g.setFontPixeloidSans(1);
-require("FontDennis8").add(Graphics);
 
 NRF.on('connect', function(addr) {
   // Update this property when connected in bluetooth
@@ -125,6 +124,13 @@ function switchStateInstall(newMode) {
       repeat: false,
       debounce: 10
     });
+    if (timeout_reset > 0) {
+      try {
+        clearTimeout(timeout_reset);
+      } catch (e) {
+        //ignore
+      }
+    }
   }
   installScreen();
   if (mode) {
@@ -197,14 +203,13 @@ function questionBDrawScreen() {
 function installScreen() {
   if (mode == 1) {
     g.clear();
-    g.setFont("Dennis8");
     g.setFontAlign(0.5, -1);
     let text = "Installation mode\nPixl.js " + NRF.getAddress().substr(12, 5).replace(":", "")+"\n";
     let diff = Date().valueOf() - lastSeen.valueOf();
     if (diff > TIMEOUT_RPI) {
       text += "No Rpi Connection";
     } else {
-      text += "Vu il y a " + parseInt(diff / 1000) + " secondes\nRSSI: " + rssi + " dB (" + rssiPowerHint() + ")";
+      text += parseInt(diff / 1000) + " s à " + rssi + " dB (" + rssiPowerHint() + ")";
     }
     let t = g.stringMetrics(text);
     g.drawString(text, g.getWidth() / 2, 0);
@@ -418,7 +423,6 @@ function installResetTimeout() {
 
 function screenQuestionA() {
   installResetTimeout();
-  g.setFontPixeloidSans(1);
   mode = 2;
   currentForm = [];
   Pixl.setLCDPower(true);
@@ -490,7 +494,6 @@ function screenIdle() {
   Pixl.setLCDPower(true);
   LED.write(1);
   g.clear();
-  g.setFontPixeloidSans(1);
   g.setFontAlign(1, -1);
   g.drawString("Un passage m'a gêné>\naccéder au questionnaire", g.getWidth(), 0);
   g.setFontAlign(1, 1);
