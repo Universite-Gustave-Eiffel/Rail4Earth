@@ -100,7 +100,7 @@ def get_rpi_status():
         for result in client.dict_stream(convert_datetime=True, filter=["TPV"]):
             gpdsdout = "%.5s %.5s" % (result.get("lat", "n/a"), result.get("lon", "n/a"))
             break
-    rpi_status = "Mic: %s\\nVpn: %s\\nBat: %s\\nGps: %s" % (mic, vpn, battery, gpdsdout)
+    rpi_status = "Mic: %.20s\\nVpn: %.20s\\nBat: %.20s\\nGps: %.20s" % (mic, vpn, battery, gpdsdout)
     return rpi_status.encode("iso-8859-1")
 
 
@@ -251,7 +251,7 @@ async def main(config):
         if SERVICE_MODE in scan_result.advertising_data.service_data:
             mode = scan_result.advertising_data.service_data[SERVICE_MODE].decode("ascii")
         else:
-            mode = 0
+            mode = "normal"
         if SERVICE_ANSWER_SIZE in scan_result.advertising_data.service_data:
             answer_stack = int.from_bytes(scan_result.advertising_data.service_data[SERVICE_ANSWER_SIZE]
                                           , byteorder="big")
@@ -281,7 +281,12 @@ async def main(config):
                             await client.write_gatt_char(rx_char, buffer)
                         await asyncio.sleep(0.5)
                         print(scan_result.received_data.getvalue().decode("iso-8859-1"))
-
+                        if SERVICE_MODE in scan_result.advertising_data.service_data:
+                            mode = scan_result.advertising_data.service_data[SERVICE_MODE].decode("ascii")
+                        else:
+                            mode = "normal"
+                        if mode != "install":
+                            break
             except (BleakError, asyncio.TimeoutError) as e:
                 logger.error("Abort communication with pixl.js", e)
         elif answer_stack > 0:

@@ -112,8 +112,6 @@ function switchStateInstall(newMode) {
       ["version", CODE_VERSION],
       ["answers", Object.fromEntries(currentForm)]
     ])));
-  } else if(mode==0) {
-    NRF.disconnect();
   }
   mode = newMode;
   updateAdvertisement();
@@ -121,7 +119,7 @@ function switchStateInstall(newMode) {
     Pixl.setLCDPower(true);
     LED.write(1);
     disableButtons();
-    setWatch(e => {switchStateInstall(0);NRF.disconnect();}, BTN1, {
+    setWatch(e => {switchStateInstall(0);}, BTN1, {
       repeat: false,
       debounce: 10
     });
@@ -197,16 +195,19 @@ function questionBDrawScreen() {
 function installScreen() {
   if (mode == 1) {
     g.clear();
+    g.setFont("4x6");
     g.setFontAlign(0.5, -1);
     let text = "Installation mode\nPixl.js " + NRF.getAddress().substr(12, 5).replace(":", "")+"\n";
     let diff = Date().valueOf() - lastSeen.valueOf();
     if (diff > TIMEOUT_RPI) {
-      text += "No Rpi Connection\n";
+      text += "No Rpi Connection";
     } else {
-      text += "Vu il y a " + parseInt(diff / 1000) + " secondes\nRSSI: " + rssi + " dB (" + rssiPowerHint() + ")\n";
+      text += "Vu il y a " + parseInt(diff / 1000) + " secondes\nRSSI: " + rssi + " dB (" + rssiPowerHint() + ")";
     }
-    text+=rpi_status;
+    let t = g.stringMetrics(text);
     g.drawString(text, g.getWidth() / 2, 0);
+    g.setFontAlign(-1, -1);
+    g.drawString(rpi_status, 0, t.height + 1);
     g.flip();
     setTimeout(installScreen, 500);
   } else {
@@ -415,6 +416,7 @@ function installResetTimeout() {
 
 function screenQuestionA() {
   installResetTimeout();
+  g.setFontPixeloidSans(1);
   mode = 2;
   currentForm = [];
   Pixl.setLCDPower(true);
@@ -486,6 +488,7 @@ function screenIdle() {
   Pixl.setLCDPower(true);
   LED.write(1);
   g.clear();
+  g.setFontPixeloidSans(1);
   g.setFontAlign(1, -1);
   g.drawString("Un passage m'a gêné>\naccéder au questionnaire", g.getWidth(), 0);
   g.setFontAlign(1, 1);
