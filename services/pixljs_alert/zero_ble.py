@@ -281,7 +281,7 @@ async def main(config):
                         await asyncio.sleep(0.05)
                         return_messages = scan_result.received_data.getvalue().decode("iso-8859-1")
                         if "mode=1" not in return_messages:
-                            print("Exit install mode")
+                            print("Exit install mode %s" % return_messages)
                             break
             except (BleakError, asyncio.TimeoutError) as e:
                 logger.error("Abort communication with pixl.js", e)
