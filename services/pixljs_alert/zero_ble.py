@@ -103,8 +103,6 @@ def get_rpi_status():
     rpi_status = "Mic: %s\nVpn: %s\nBat: %s\nGps: %s" % (mic, vpn, battery, gpdsdout)
     return rpi_status
 
-print(get_rpi_status())
-
 
 class BleTrackingDaemon:
     known_devices = {}
