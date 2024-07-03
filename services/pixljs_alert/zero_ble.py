@@ -265,7 +265,7 @@ async def main(config):
         if mode == "install":
             print("Install mode connecting to Pixl.js")
             try:
-                async with ((BleakClient(scan_result.device) as client)):
+                async with (BleakClient(scan_result.device) as client):
                     await client.start_notify(UART_TX_CHAR_UUID, scan_result.uart_data_received)
                     nus = client.services.get_service(UART_SERVICE_UUID)
                     rx_char = nus.get_characteristic(UART_RX_CHAR_UUID)
