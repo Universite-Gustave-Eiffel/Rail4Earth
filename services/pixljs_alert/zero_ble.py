@@ -274,18 +274,14 @@ async def main(config):
                         rpi_status = get_rpi_status()
                         print(rpi_status)
                         c = (b"\x03\x10if(Math.abs(getTime()-%f) > 300) { setTime("
-                             b"%f);E.setTimeZone(%d);};\nrpi_status=\"%s\";lastSeen = Date();\n"
+                             b"%f);E.setTimeZone(%d);};\nrpi_status=\"%s\";lastSeen = Date();print(\"mode=\"+mode);\n"
                              ) % (now, now, -time.altzone // 3600, rpi_status)
                         scan_result.received_data = io.BytesIO()
                         for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
                             await client.write_gatt_char(rx_char, buffer)
                         await asyncio.sleep(0.5)
-                        print(scan_result.received_data.getvalue().decode("iso-8859-1"))
-                        if SERVICE_MODE in scan_result.advertising_data.service_data:
-                            mode = scan_result.advertising_data.service_data[SERVICE_MODE].decode("ascii")
-                        else:
-                            mode = "normal"
-                        if mode != "install":
+                        return_messages = scan_result.received_data.getvalue().decode("iso-8859-1")
+                        if "mode=1" not in return_messages:
                             break
             except (BleakError, asyncio.TimeoutError) as e:
                 logger.error("Abort communication with pixl.js", e)
