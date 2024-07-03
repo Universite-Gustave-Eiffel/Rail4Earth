@@ -366,7 +366,7 @@ async def main(config):
                 except (BleakError, asyncio.TimeoutError) as e:
                     tries += 1
                     logger.error("Send data error", e)
-                    if tries > config.max_try:
+                    if tries > config.max_try or doing_upgrade:
                         break
                     else:
                         await asyncio.sleep(0.5)
