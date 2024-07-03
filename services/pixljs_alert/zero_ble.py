@@ -324,22 +324,23 @@ async def main(config):
                       scan_result.device.address)
             tries = 0
             while c:
+                print("Try sending commands %.10s" % c)
                 try:
                     async with BleakClient(scan_result.device) as client:
                         await client.start_notify(UART_TX_CHAR_UUID, scan_result.uart_data_received)
                         nus = client.services.get_service(UART_SERVICE_UUID)
                         rx_char = nus.get_characteristic(UART_RX_CHAR_UUID)
                         for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
-                            await client.write_gatt_char(rx_char, buffer, False)
-                            # wait for end transfer
-                            await asyncio.sleep(0.05)
+                            await client.write_gatt_char(rx_char, buffer)
                             while time.time() - scan_result.received_data_time < 0.1:
-                                await asyncio.sleep(0.05)
+                                # wait for end transfer
+                                await asyncio.sleep(0.005)
                         c = ""
                         try:
                             output = scan_result.received_data.getvalue().decode("iso-8859-1")
                             scan_result.received_data = io.BytesIO()
-                            print(output)
+                            for line in output.splitlines():
+                                print(line)
                         except UnicodeDecodeError as e:
                             pass
                         if doing_upgrade:
