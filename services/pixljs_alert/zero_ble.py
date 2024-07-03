@@ -265,18 +265,22 @@ async def main(config):
         if mode == "install":
             print("Install mode connecting to Pixl.js")
             try:
-                async with BleakClient(scan_result.device) as client:
+                async with (BleakClient(scan_result.device) as client):
                     await client.start_notify(UART_TX_CHAR_UUID, scan_result.uart_data_received)
                     nus = client.services.get_service(UART_SERVICE_UUID)
                     rx_char = nus.get_characteristic(UART_RX_CHAR_UUID)
-                    while client.is_connected:
+                    while client.is_connected and not t.is_set():
                         now = time.time()
                         rpi_status = get_rpi_status()
                         print(rpi_status)
-                        c = b"\x03\x10if(Math.abs(getTime()-%f) > 300) { setTime(%f);E.setTimeZone(%d);};\nrpi_status=\"%s\";lastSeen = Date();\n" % (now, now, -time.altzone // 3600, rpi_status)
+                        c = (b"\x03\x10if(Math.abs(getTime()-%f) > 300) { setTime("
+                             b"%f);E.setTimeZone(%d);};\nrpi_status=\"%s\";lastSeen = Date();\n"
+                             ) % (now, now, -time.altzone // 3600, rpi_status)
+                        scan_result.received_data = io.BytesIO()
                         for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
-                            await client.write_gatt_char(rx_char, buffer, False)
+                            await client.write_gatt_char(rx_char, buffer)
                         await asyncio.sleep(0.5)
+                        print(scan_result.received_data.getvalue().decode("iso-8859-1"))
 
             except (BleakError, asyncio.TimeoutError) as e:
                 logger.error("Abort communication with pixl.js", e)
@@ -293,7 +297,7 @@ async def main(config):
                         await client.write_gatt_char(rx_char, buffer, False)
                     # wait for end of data arrival
                     await asyncio.sleep(0.5)
-                    while time.time() - scan_result.received_data_time < 1.0:
+                    while time.time() - scan_result.received_data_time < 1.0 and not t.is_set():
                         await asyncio.sleep(0.5)
                     try:
                         json_string = scan_result.received_data.getvalue().decode("utf8")
@@ -323,7 +327,7 @@ async def main(config):
                 print("Sending new version of Pixl.js source code to %s" %
                       scan_result.device.address)
             tries = 0
-            while c:
+            while c and not t.is_set():
                 print("Try sending commands %.10s" % c)
                 try:
                     async with BleakClient(scan_result.device) as client:
