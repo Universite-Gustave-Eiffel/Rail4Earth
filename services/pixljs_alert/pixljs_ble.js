@@ -117,6 +117,7 @@ function switchStateInstall(newMode) {
   mode = newMode;
   updateAdvertisement();
   if(mode==1) {
+    var rpi_status = "";
     Pixl.setLCDPower(true);
     LED.write(1);
     disableButtons();
