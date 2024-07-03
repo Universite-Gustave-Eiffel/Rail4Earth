@@ -105,10 +105,10 @@ def get_rpi_status():
                     if os.path.exists(calibration_file):
                         with open(calibration_file, "r") as calib:
                             json_doc = json.load(calib)
-                            sensitivity = "%.2f dBFS@94dB" % json_doc["sensitivity"]
+                            sensitivity = "%.1f dBFS@94dB" % json_doc["sensitivity"]
                 except json.JSONDecodeError as e:
                     pass
-                mic = "OK (%s)" % sensitivity
+                mic = "OK %s" % sensitivity
                 break
     except subprocess.CalledProcessError as e:
         pass
