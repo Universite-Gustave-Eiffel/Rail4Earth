@@ -265,7 +265,7 @@ async def main(config):
         if mode == "install":
             print("Install mode connecting to Pixl.js")
             try:
-                async with (BleakClient(scan_result.device) as client):
+                async with ((BleakClient(scan_result.device) as client)):
                     await client.start_notify(UART_TX_CHAR_UUID, scan_result.uart_data_received)
                     nus = client.services.get_service(UART_SERVICE_UUID)
                     rx_char = nus.get_characteristic(UART_RX_CHAR_UUID)
@@ -278,7 +278,8 @@ async def main(config):
                         scan_result.received_data = io.BytesIO()
                         for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
                             await client.write_gatt_char(rx_char, buffer)
-                        while time.time() - scan_result.received_data_time < 0.1 and not t.is_set():
+                        while ">" not in scan_result.received_data \
+                            .getvalue().decode("iso-8859-1") and not t.is_set():
                             await asyncio.sleep(0.1)
                         return_messages = scan_result.received_data.getvalue().decode("iso-8859-1")
                         if "mode=1" not in return_messages:
