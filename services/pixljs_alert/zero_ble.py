@@ -45,7 +45,7 @@ def get_hw_address(interface_name):
 
 
 def slice_bytes(data: bytes, n: int):
-    return (data[i:i + n] for i in range(0, len(data), n))
+    return list(data[i:i + n] for i in range(0, len(data), n))
 
 
 def time_to_iso(seconds_since_epoch):
@@ -343,17 +343,24 @@ async def main(config):
                         await client.start_notify(UART_TX_CHAR_UUID, scan_result.uart_data_received)
                         nus = client.services.get_service(UART_SERVICE_UUID)
                         rx_char = nus.get_characteristic(UART_RX_CHAR_UUID)
-                        scan_result.received_data = io.BytesIO()
                         for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
-                            await client.write_gatt_char(rx_char, buffer)
+                            await client.write_gatt_char(rx_char, buffer, False)
                             scan_result.received_data_time = time.time()
-                            while time.time() - scan_result.received_data_time < 0.15:
-                                # wait for end transfer
+                            # wait for end transfer
+                            await asyncio.sleep(0.05)
+                            while time.time() - scan_result.received_data_time < 0.1:
                                 await asyncio.sleep(0.05)
                         c = ""
+                        try:
+                            output = scan_result.received_data.getvalue().decode("iso-8859-1")
+                            scan_result.received_data = io.BytesIO()
+                            print(output[:-60])
+                        except UnicodeDecodeError as e:
+                            pass
                         if doing_upgrade:
                             await asyncio.sleep(10.0)
                             doing_upgrade = False
+                            print("Upgrade done !")
                 except (BleakError, asyncio.TimeoutError) as e:
                     tries += 1
                     logger.error("Send data error", e)
