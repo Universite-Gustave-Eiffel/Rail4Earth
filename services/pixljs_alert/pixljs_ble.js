@@ -21,6 +21,7 @@ var PIN_BUZZER = A0; // Yellow cable pin Buzzer is connected to
 Pixl.setLCDPower(false);
 var mode = 0; // 0 wait 1 install 2 answering question
 var rssi = -100;
+var rpi_status = "";
 let lastSeen = Date(0);
 const MODE_SWITCH_MILLI = 2000;
 const TIMEOUT_RPI = 15000;
@@ -52,6 +53,16 @@ Graphics.prototype.setFontPixeloidSans = function(scale) {
   );
 };
 g.setFontPixeloidSans(1);
+
+NRF.on('connect', function(addr) {
+  // Update this property when connected in bluetooth
+  NRF.setRSSIHandler(function(fetched_rssi) {
+    rssi = fetched_rssi;
+  });
+});
+
+NRF.on('disconnect', function(reason) { NRF.setRSSIHandler(); });
+
 
 function disableButtons() {
   clearWatch();
@@ -108,7 +119,7 @@ function switchStateInstall(newMode) {
     Pixl.setLCDPower(true);
     LED.write(1);
     disableButtons();
-    setWatch(e => {switchStateInstall(0);}, BTN1, {
+    setWatch(e => {switchStateInstall(0);NRF.disconnect();}, BTN1, {
       repeat: false,
       debounce: 10
     });

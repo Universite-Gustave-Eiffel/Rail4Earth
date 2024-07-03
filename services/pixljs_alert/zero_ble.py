@@ -20,6 +20,9 @@ import socket
 import struct
 import re
 import base64
+from pijuice import PiJuice
+import subprocess
+from gpsdclient import GPSDClient
 
 UART_SERVICE_UUID = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
 UART_RX_CHAR_UUID = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -77,6 +80,30 @@ class AgendaUpdateDaemon:
                 except HTTPError as e:
                     logger.error("Error while fetching agenda", e)
             self.t.wait(1300)
+
+def get_rpi_status():
+    pi_juice = PiJuice(1, 0x14)
+    battery = pi_juice.status.GetStatus()["data"]["battery"]
+    vpn_out = subprocess.check_output(("ifconfig", "tun0"), timeout=1)
+    vpn = "disconnected"
+    for line in vpn_out.decode("utf8").splitlines():
+        if "inet " in line:
+            vpn = line.split()[1]
+            break
+    mic_out = subprocess.check_output(("arecord","-L"), timeout=1)
+    mic = "no mic"
+    for line in mic_out.decode("utf8").splitlines():
+        if "plughw" in line:
+            mic = line
+            break
+    with GPSDClient() as client:
+        for result in client.dict_stream(convert_datetime=True, filter=["TPV"]):
+            gpdsdout = "%.5s %.5s" % (result.get("lat", "n/a"), result.get("lon", "n/a"))
+            break
+    rpi_status = "Mic: %s\nVpn: %s\nBat: %s\nGps: %s" % (mic, vpn, battery, gpdsdout)
+    return rpi_status
+
+print(get_rpi_status())
 
 
 class BleTrackingDaemon:
@@ -245,10 +272,17 @@ async def main(config):
                     rx_char = nus.get_characteristic(UART_RX_CHAR_UUID)
                     now = time.time()
                     c = (
-                            b"\x03\x10if(Math.abs(getTime()-%f) > 300) { setTime(%f);E.setTimeZone(%d);}lastSeen=Date();rssi=%f;\n") % (
-                            now, now, -time.altzone // 3600, scan_result.advertising_data.rssi)
+                            b"\x03\x10if(Math.abs(getTime()-%f) > 300) { setTime(%f);E.setTimeZone(%d);};\n") % (
+                            now, now, -time.altzone // 3600)
                     for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
                         await client.write_gatt_char(rx_char, buffer, False)
+                    while client.is_connected:
+                        rpi_status = get_rpi_status()
+                        c = b"rpi_status=\"%s\";lastSeen = Date();\n" % (rpi_status)
+                        for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
+                            await client.write_gatt_char(rx_char, buffer, False)
+                        await asyncio.sleep(0.5)
+
             except (BleakError, asyncio.TimeoutError) as e:
                 logger.error("Abort communication with pixl.js", e)
         elif answer_stack > 0:
