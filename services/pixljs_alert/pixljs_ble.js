@@ -112,6 +112,8 @@ function switchStateInstall(newMode) {
       ["version", CODE_VERSION],
       ["answers", Object.fromEntries(currentForm)]
     ])));
+  } else if(mode==0) {
+    NRF.disconnect();
   }
   mode = newMode;
   updateAdvertisement();
