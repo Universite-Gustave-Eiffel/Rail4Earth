@@ -291,10 +291,10 @@ async def main(config):
                         for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
                             await client.write_gatt_char(rx_char, buffer)
                         while ">" not in scan_result.received_data \
-                                .getvalue().decode("iso-8859-1") and not t.is_set():
+                                .getvalue().decode("iso-8859-1") and not t.is_set() and client.is_connected:
                             await asyncio.sleep(0.1)
                         return_messages = scan_result.received_data.getvalue().decode("iso-8859-1")
-                        if "mode=1" not in return_messages:
+                        if "mode=1" not in return_messages or not client.is_connected:
                             print("Exit install mode %s" % return_messages)
                             break
             except (BleakError, asyncio.TimeoutError) as e:
