@@ -352,6 +352,8 @@ async def main(config):
                             await asyncio.sleep(0.05)
                             while time.time() - scan_result.received_data_time < 0.1:
                                 await asyncio.sleep(0.05)
+                            if t.is_set():
+                                break
                         c = ""
                         try:
                             output = scan_result.received_data.getvalue().decode("iso-8859-1")
