@@ -53,6 +53,7 @@ Graphics.prototype.setFontPixeloidSans = function(scale) {
   );
 };
 g.setFontPixeloidSans(1);
+require("FontDennis8").add(Graphics);
 
 NRF.on('connect', function(addr) {
   // Update this property when connected in bluetooth
@@ -195,7 +196,7 @@ function questionBDrawScreen() {
 function installScreen() {
   if (mode == 1) {
     g.clear();
-    g.setFont("4x6");
+    g.setFont("Dennis8");
     g.setFontAlign(0.5, -1);
     let text = "Installation mode\nPixl.js " + NRF.getAddress().substr(12, 5).replace(":", "")+"\n";
     let diff = Date().valueOf() - lastSeen.valueOf();
