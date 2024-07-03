@@ -101,7 +101,7 @@ def get_rpi_status():
             gpdsdout = "%.5s %.5s" % (result.get("lat", "n/a"), result.get("lon", "n/a"))
             break
     rpi_status = "Mic: %s\nVpn: %s\nBat: %s\nGps: %s" % (mic, vpn, battery, gpdsdout)
-    return rpi_status
+    return rpi_status.encode("iso-8859-1")
 
 
 class BleTrackingDaemon:
