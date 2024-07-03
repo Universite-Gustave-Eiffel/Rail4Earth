@@ -1,5 +1,5 @@
 // force timezone to UTC+0200
-const CODE_VERSION=4;
+const CODE_VERSION=5;
 E.setTimeZone(2);
 const BUZZING_TIME = 60000; // buzzer time ms
 const RESET_NO_ANSWER = 60000;
@@ -205,7 +205,7 @@ function installScreen() {
     } else {
       text += "Vu il y a " + parseInt(diff / 1000) + " secondes\nRSSI: " + rssi + " dB (" + rssiPowerHint() + ")\n";
     }
-    text+=rpi_status
+    text+=rpi_status;
     g.drawString(text, g.getWidth() / 2, 0);
     g.flip();
     setTimeout(installScreen, 500);

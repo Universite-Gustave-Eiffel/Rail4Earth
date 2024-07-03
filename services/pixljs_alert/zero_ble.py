@@ -247,7 +247,7 @@ async def main(config):
         stop_event = asyncio.Event()
         scan_result = ScanResult(stop_event, ble_tracking)
         async with BleakScanner(scan_result.callback) as scanner:
-            await stop_event.wait()
+            await asyncio.wait_for(stop_event.wait(), timeout=2.0)
         if SERVICE_MODE in scan_result.advertising_data.service_data:
             mode = scan_result.advertising_data.service_data[SERVICE_MODE].decode("ascii")
         else:
@@ -263,20 +263,17 @@ async def main(config):
         else:
             code_version = 0
         if mode == "install":
+            print("Install mode connecting to Pixl.js")
             try:
                 async with BleakClient(scan_result.device) as client:
                     await client.start_notify(UART_TX_CHAR_UUID, scan_result.uart_data_received)
                     nus = client.services.get_service(UART_SERVICE_UUID)
                     rx_char = nus.get_characteristic(UART_RX_CHAR_UUID)
-                    now = time.time()
-                    c = (
-                            b"\x03\x10if(Math.abs(getTime()-%f) > 300) { setTime(%f);E.setTimeZone(%d);};\n") % (
-                            now, now, -time.altzone // 3600)
-                    for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
-                        await client.write_gatt_char(rx_char, buffer, False)
                     while client.is_connected:
+                        now = time.time()
                         rpi_status = get_rpi_status()
-                        c = b"rpi_status=\"%s\";lastSeen = Date();\n" % (rpi_status)
+                        print(rpi_status)
+                        c = b"\x03\x10if(Math.abs(getTime()-%f) > 300) { setTime(%f);E.setTimeZone(%d);};\nrpi_status=\"%s\";lastSeen = Date();\n" % (now, now, -time.altzone // 3600, rpi_status)
                         for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
                             await client.write_gatt_char(rx_char, buffer, False)
                         await asyncio.sleep(0.5)
