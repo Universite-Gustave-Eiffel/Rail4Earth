@@ -248,8 +248,11 @@ async def main(config):
     while not t.is_set():
         stop_event = asyncio.Event()
         scan_result = ScanResult(stop_event, ble_tracking)
-        async with BleakScanner(scan_result.callback) as scanner:
-            await asyncio.wait_for(stop_event.wait(), timeout=2.0)
+        try:
+            async with BleakScanner(scan_result.callback) as scanner:
+                await asyncio.wait_for(stop_event.wait(), timeout=2.0)
+        except asyncio.TimeoutError as e:
+            continue
         if SERVICE_MODE in scan_result.advertising_data.service_data:
             mode = scan_result.advertising_data.service_data[SERVICE_MODE].decode("ascii")
         else:
