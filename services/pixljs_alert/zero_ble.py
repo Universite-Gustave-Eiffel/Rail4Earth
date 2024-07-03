@@ -85,18 +85,24 @@ class AgendaUpdateDaemon:
 def get_rpi_status():
     pi_juice = PiJuice(1, 0x14)
     battery = pi_juice.status.GetStatus()["data"]["battery"]
-    vpn_out = subprocess.check_output(("ifconfig", "tun0"), timeout=1)
     vpn = "disconnected"
-    for line in vpn_out.decode("utf8").splitlines():
-        if "inet " in line:
-            vpn = line.split()[1]
-            break
-    mic_out = subprocess.check_output(("arecord", "-L"), timeout=1)
+    try:
+        vpn_out = subprocess.check_output(("ifconfig", "tun0"), timeout=1)
+        for line in vpn_out.decode("utf8").splitlines():
+            if "inet " in line:
+                vpn = line.split()[1]
+                break
+    except subprocess.CalledProcessError as e:
+        pass
     mic = "no mic"
-    for line in mic_out.decode("utf8").splitlines():
-        if "plughw" in line:
-            mic = line
-            break
+    try:
+        mic_out = subprocess.check_output(("arecord", "-L"), timeout=1)
+        for line in mic_out.decode("utf8").splitlines():
+            if "plughw" in line:
+                mic = line
+                break
+    except subprocess.CalledProcessError as e:
+        pass
     with GPSDClient() as client:
         for result in client.dict_stream(convert_datetime=True, filter=["TPV"]):
             gpdsdout = "%.7s %.7s" % (result.get("lat", "n/a"), result.get("lon", "n/a"))
