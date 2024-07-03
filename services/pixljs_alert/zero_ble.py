@@ -81,6 +81,7 @@ class AgendaUpdateDaemon:
                     logger.error("Error while fetching agenda", e)
             self.t.wait(1300)
 
+
 def get_rpi_status():
     pi_juice = PiJuice(1, 0x14)
     battery = pi_juice.status.GetStatus()["data"]["battery"]
@@ -90,7 +91,7 @@ def get_rpi_status():
         if "inet " in line:
             vpn = line.split()[1]
             break
-    mic_out = subprocess.check_output(("arecord","-L"), timeout=1)
+    mic_out = subprocess.check_output(("arecord", "-L"), timeout=1)
     mic = "no mic"
     for line in mic_out.decode("utf8").splitlines():
         if "plughw" in line:
@@ -205,11 +206,12 @@ def fetch_script_source_and_version():
         if g:
             source_version = int(g.group(1))
         uart_commands.append("require(\"Storage\").write(\"%s\",atob(\"%s\"),%d,%d);" % (
-            ".bootcde", base64.b64encode(code_bytes[:chunk_size]).decode("UTF8"), 0, len(code_bytes)))
+            ".bootcde", base64.b64encode(code_bytes[:chunk_size]).decode("UTF8"), 0,
+            len(code_bytes)))
         for i in range(chunk_size, len(code_bytes), chunk_size):
             uart_commands.append("require(\"Storage\").write(\"%s\",atob(\"%s\"),%d);" % (
                 ".bootcde", base64.b64encode(code_bytes[i:i + chunk_size]).decode("UTF8"), i))
-        code = "\n".join(uart_commands)+"\nload();\n"
+        code = "\n".join(uart_commands) + "\nload();\n"
     return code.encode("iso-8859-1"), source_version
 
 
@@ -253,13 +255,14 @@ async def main(config):
         else:
             mode = "normal"
         if SERVICE_ANSWER_SIZE in scan_result.advertising_data.service_data:
-            answer_stack = int.from_bytes(scan_result.advertising_data.service_data[SERVICE_ANSWER_SIZE]
-                                          , byteorder="big")
+            answer_stack = int.from_bytes(
+                scan_result.advertising_data.service_data[SERVICE_ANSWER_SIZE]
+                , byteorder="big")
         else:
             answer_stack = 0
         if SERVICE_VERSION in scan_result.advertising_data.service_data:
             code_version = int.from_bytes(scan_result.advertising_data.service_data[SERVICE_VERSION]
-                                      , byteorder="big")
+                                          , byteorder="big")
         else:
             code_version = 0
         if mode == "install":
@@ -279,7 +282,7 @@ async def main(config):
                         for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
                             await client.write_gatt_char(rx_char, buffer)
                         while ">" not in scan_result.received_data \
-                            .getvalue().decode("iso-8859-1") and not t.is_set():
+                                .getvalue().decode("iso-8859-1") and not t.is_set():
                             await asyncio.sleep(0.1)
                         return_messages = scan_result.received_data.getvalue().decode("iso-8859-1")
                         if "mode=1" not in return_messages:
@@ -337,19 +340,14 @@ async def main(config):
                         await client.start_notify(UART_TX_CHAR_UUID, scan_result.uart_data_received)
                         nus = client.services.get_service(UART_SERVICE_UUID)
                         rx_char = nus.get_characteristic(UART_RX_CHAR_UUID)
+                        scan_result.received_data = io.BytesIO()
                         for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
                             await client.write_gatt_char(rx_char, buffer)
-                            while time.time() - scan_result.received_data_time < 0.1:
+                            scan_result.received_data_time = time.time()
+                            while time.time() - scan_result.received_data_time < 0.15:
                                 # wait for end transfer
-                                await asyncio.sleep(0.005)
+                                await asyncio.sleep(0.05)
                         c = ""
-                        try:
-                            output = scan_result.received_data.getvalue().decode("iso-8859-1")
-                            scan_result.received_data = io.BytesIO()
-                            for line in output.splitlines():
-                                print(line)
-                        except UnicodeDecodeError as e:
-                            pass
                         if doing_upgrade:
                             await asyncio.sleep(10.0)
                             doing_upgrade = False
