@@ -299,9 +299,13 @@ async def main(config):
                         scan_result.received_data = io.BytesIO()
                         for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
                             await client.write_gatt_char(rx_char, buffer)
-                        while ">" not in scan_result.received_data \
-                                .getvalue().decode("iso-8859-1") and not t.is_set() and client.is_connected:
-                            await asyncio.sleep(0.1)
+                            scan_result.received_data_time = time.time()
+                            # wait for end transfer
+                            await asyncio.sleep(0.05)
+                            while time.time() - scan_result.received_data_time < 0.1:
+                                await asyncio.sleep(0.05)
+                            if t.is_set():
+                                break
                         return_messages = scan_result.received_data.getvalue().decode("iso-8859-1")
                         if "mode=1" not in return_messages or not client.is_connected:
                             print("Exit install mode %s" % return_messages)
@@ -320,6 +324,7 @@ async def main(config):
                     for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
                         await client.write_gatt_char(rx_char, buffer, False)
                     # wait for end of data arrival
+                    scan_result.received_data_time = time.time()
                     await asyncio.sleep(0.5)
                     while time.time() - scan_result.received_data_time < 1.0 and not t.is_set():
                         await asyncio.sleep(0.5)
