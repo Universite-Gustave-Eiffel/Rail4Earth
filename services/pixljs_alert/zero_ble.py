@@ -1,5 +1,6 @@
 import asyncio
 import os.path
+import urllib.error
 from threading import Thread
 from bleak.backends.characteristic import BleakGATTCharacteristic
 from bleak import BleakClient, BleakError
@@ -9,10 +10,12 @@ import zmq
 import argparse
 import time
 import io
+import sys
 import json
 import datetime
 import signal
 from threading import Event
+import threading
 from urllib.error import HTTPError
 from urllib.request import urlopen
 import fcntl
@@ -23,6 +26,7 @@ import base64
 from pijuice import PiJuice
 import subprocess
 from gpsdclient import GPSDClient
+import traceback
 
 UART_SERVICE_UUID = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
 UART_RX_CHAR_UUID = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -77,7 +81,7 @@ class AgendaUpdateDaemon:
                                 self.agenda["last_fetch"] = time.time()
                             except json.JSONDecodeError as e:
                                 logger.error("Error while decoding api response", e)
-                except HTTPError as e:
+                except urllib.error.URLError as e:
                     logger.error("Error while fetching agenda", e)
             self.t.wait(1300)
 
@@ -160,6 +164,10 @@ class BleTrackingDaemon:
             self.known_devices = {}
             self.t.wait(300)
         print("Exiting daemon")
+        for th in threading.enumerate():
+            print(th)
+            traceback.print_stack(sys._current_frames()[th.ident])
+            print()
 
 
 class ScanResult:
