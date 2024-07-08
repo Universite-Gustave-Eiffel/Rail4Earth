@@ -202,6 +202,7 @@ def process_message(socket, config, agenda):
         return ""
     data = socket.recv_json()
     if data:
+        print("Receive event %s" % data)
         today = datetime.date.today().isoformat()
         today_datetime = datetime.datetime.today()
         if today in agenda["days"]:
@@ -219,6 +220,8 @@ def process_message(socket, config, agenda):
                         b" setTime(%f);E.setTimeZone(%d);"
                         b"}"
                         b"onTrainCrossing(false);\n") % (now, now, -time.altzone // 3600)
+            else:
+                print("Ignore event as it does not fit in agenda %s " % repr(agenda))
     return ""
 
 
