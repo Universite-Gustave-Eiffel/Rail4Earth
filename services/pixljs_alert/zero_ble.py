@@ -116,10 +116,14 @@ def get_rpi_status():
                 break
     except subprocess.CalledProcessError as e:
         pass
-    with GPSDClient(timeout=1) as client:
-        for result in client.dict_stream(convert_datetime=True, filter=["TPV"]):
-            gpdsdout = "%.7s %.7s" % (result.get("lat", "n/a"), result.get("lon", "n/a"))
-            break
+    gpdsdout = "timeout"
+    try:
+        with GPSDClient(timeout=1) as client:
+            for result in client.dict_stream(convert_datetime=True, filter=["TPV"]):
+                gpdsdout = "%.7s %.7s" % (result.get("lat", "n/a"), result.get("lon", "n/a"))
+                break
+    except socket.timeout as e:
+        pass
     rpi_status = "Mic: %.20s\\nVpn: %.20s\\nBat: %.20s\\nGps: %.20s" % (mic, vpn, battery, gpdsdout)
     return rpi_status.encode("iso-8859-1")
 
