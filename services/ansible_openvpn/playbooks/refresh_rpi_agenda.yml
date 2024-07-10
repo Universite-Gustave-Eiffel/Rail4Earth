@@ -1,0 +1,22 @@
+- name: Reload ble agenda by restarting ble service
+  hosts: rpi
+  vars:
+    ansible_remote_tmp: /run/user/1000
+  tasks:
+    - name: Restart noisesensor services
+      become: true
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: restarted
+      with_items:
+        - zeroble.service
+    - name: Pause for service restart
+      ansible.builtin.pause:
+        seconds: 10
+    - name: Get start log
+      shell:
+        cmd: journalctl -u zeroble.service --since "5 minutes ago"
+      register: journal_content
+    - name: Print result
+      ansible.builtin.debug:
+        msg: "{{ journal_content.stdout }}"

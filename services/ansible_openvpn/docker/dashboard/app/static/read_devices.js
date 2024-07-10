@@ -19,7 +19,16 @@ const sizeRenderer = function(instance, td, row, col, prop, value, cellPropertie
   return td;
 };
 
+const epochRenderer = function(instance, td, row, col, prop, value, cellProperties) {
+  Handsontable.renderers.BaseRenderer.apply(this, arguments);
+  td.innerHTML = new Date(value).toLocaleString(navigator.language,
+   { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute:'numeric',
+   second:'numeric', timeZoneName: 'short' })
+  return td;
+};
+
 Handsontable.renderers.registerRenderer('bytes', sizeRenderer);
+Handsontable.renderers.registerRenderer('epoch', epochRenderer);
 
 var devices = new Handsontable(stationTable, {
   data:downloadedData,
@@ -37,14 +46,16 @@ var devices = new Handsontable(stationTable, {
       editor: false
     },
     {
-      data: 'Connected Since',
+      data: 'epoch_connected',
       readOnly: true,
-      editor: false
+      editor: false,
+      renderer: 'epoch'
     },
     {
-      data: 'Last Ref',
+      data: 'epoch_updated',
       readOnly: true,
-      editor: false
+      editor: false,
+      renderer: 'epoch'
     },
     {
       data: 'Bytes Received',
@@ -67,6 +78,8 @@ var devices = new Handsontable(stationTable, {
   }
 });
 
+const columnSorting = devices.getPlugin('columnSorting');
+
 function fetch() {
     $.ajax({
       type: "GET",
@@ -74,9 +87,15 @@ function fetch() {
       success: function(jsonContent) {
         downloadedData.length = 0;
         jsonContent.forEach(function(element) {
-          downloadedData.push(element);
+            element["epoch_connected"]= Date.parse(element["Connected Since"]+'Z');
+            element["epoch_updated"] = Date.parse(element["Last Ref"]+'Z');
+            downloadedData.push(element);
         });
-        devices.render();
+        devices.loadData(downloadedData);
+        columnSorting.sort({
+         column: 2,
+         sortOrder: 'desc',
+         });
       },
       contentType : 'application/json',
     });

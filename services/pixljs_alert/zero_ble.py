@@ -13,7 +13,7 @@ import json
 import datetime
 import signal
 from threading import Event
-from urllib.error import HTTPError
+import urllib
 from urllib.request import urlopen
 import fcntl
 import socket
@@ -74,9 +74,10 @@ class AgendaUpdateDaemon:
                                 self.agenda["last_fetch"] = time.time()
                             except json.JSONDecodeError as e:
                                 logger.error("Error while decoding api response", e)
-                except HTTPError as e:
+                except urllib.error.URLError as e:
                     logger.error("Error while fetching agenda", e)
             self.t.wait(1300)
+        print("Exiting agenda downloading daemon..")
 
 
 class BleTrackingDaemon:

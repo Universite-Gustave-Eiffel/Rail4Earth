@@ -120,7 +120,8 @@ def main():
     else:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.settimeout(5)
-        s.connect(("openvpn", int(os.environ["MANAGEMENT_OPENVPN_PORT"])))
+        s.connect((os.environ.get("MANAGEMENT_OPENVPN_HOST", "localhost"),
+                   int(os.environ.get("MANAGEMENT_OPENVPN_PORT", "5555"))))
         sout = receive(s)
         if sout == 'ENTER PASSWORD:':
             send(s, os.environ["MANAGEMENT_OPENVPN_PASSWORD"] + "\n")

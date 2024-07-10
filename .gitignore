@@ -28,6 +28,7 @@ yamnet.h5
 .tox
 *.tflite
 examples/*.ogg
+examples/api.json
 .env
 *.kt
 # openvpn server configuration

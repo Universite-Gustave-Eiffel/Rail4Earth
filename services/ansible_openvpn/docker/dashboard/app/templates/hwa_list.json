@@ -1,0 +1,20 @@
+{
+  "index": "sensor_yamnet_*",
+  "size": 0,
+  "_source": false,
+  "aggs": {
+    "hwa_list": {
+      "terms": {
+        "field": "hwa.keyword",
+        "size": 100
+      }
+    }
+  },
+  "query": {
+    "range": {
+      "date": {
+        "gte": "now+1m-1M/M"
+      }
+    }
+  }
+}

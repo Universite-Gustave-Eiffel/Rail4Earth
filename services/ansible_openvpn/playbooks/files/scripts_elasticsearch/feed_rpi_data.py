@@ -53,6 +53,9 @@ def epoch_to_elasticsearch_date(epoch):
 
 def fetch_data(args):
     for root, dirs, files in os.walk(args.json_input_folder):
+        # ignore partially transferred files of rsync (will be re-downloaded/completed later)
+        if ".~tmp~" in root or ".rsync-partial" in root:
+            continue
         for name in files:
             file_path = os.path.join(root, name)
             if name.endswith(".json.gz"):
@@ -65,6 +68,9 @@ def fetch_data(args):
                             try:
                                 json_dict = json.loads(line)
                                 if "_index" not in json_dict:
+                                    if "_source" not in json_dict:
+                                        source_doc = json_dict
+                                        json_dict = {"_source": source_doc}
                                     # must create index as it is not specified in the
                                     # document
                                     epoch = os.path.getmtime(file_path)
@@ -89,6 +95,8 @@ def fetch_data(args):
                                     json_dict["_id"] = base64.b64encode(
                                         hashlib.sha256(line).digest()).decode(
                                         sys.getdefaultencoding())
+                                if "_op_type" not in json_dict:
+                                    json_dict["_op_type"] = "create"
                                 yield json_dict
                                 processed_documents += 1
                             except json.decoder.JSONDecodeError:
@@ -105,7 +113,9 @@ def fetch_data(args):
                         os.makedirs(parent_dir_destination)
                     os.rename(file_path, destination)
                     if args.verbose:
-                        print("Processed %d documents, now move %s to %s" %(processed_documents, file_path, destination))
+                        print("Processed %d documents, now move %s to %s" % (processed_documents,
+                                                                             file_path,
+                                                                             destination))
 
 
 def main():
@@ -173,7 +183,8 @@ def main():
     successes = 0
     try:
         for ok, action in streaming_bulk(client=client,
-                                         actions=fetch_data(args)):
+                                         actions=fetch_data(args),
+                                         ignore_status=[409]):
             successes += ok
     except elasticsearch.helpers.BulkIndexError as e:
         print(e, file=sys.stderr)

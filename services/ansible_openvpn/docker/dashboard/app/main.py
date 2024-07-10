@@ -27,6 +27,8 @@
 #  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 #  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+from __future__ import annotations
+
 import logging
 
 import elasticsearch
@@ -61,12 +63,17 @@ client = Elasticsearch(
 )
 
 
-@app.get("/api/list-samples/{start_epoch_millis}/{end_epoch_millis}")
+@app.get("/api/list-samples/{start_epoch_millis}/{end_epoch_millis}/")
 async def get_list_samples(request: Request, start_epoch_millis: int,
-                           end_epoch_millis: int):
-    post_data = json.loads(
-        templates.get_template("trigger_list.json").render(
-            start_time=start_epoch_millis, end_time=end_epoch_millis))
+                           end_epoch_millis: int, hwa: str = ""):
+    if hwa:
+        post_data = json.loads(
+            templates.get_template("trigger_list_by_hwa.json").render(
+                start_time=start_epoch_millis, end_time=end_epoch_millis, hwa=hwa))
+    else:
+        post_data = json.loads(
+            templates.get_template("trigger_list.json").render(
+                start_time=start_epoch_millis, end_time=end_epoch_millis))
     resp = client.search(**post_data)
     print(json.dumps(post_data))
     hits = resp["hits"]["hits"]
@@ -131,8 +138,11 @@ async def get_sensor_position(request: Request):
 
 @app.get('/recordings', response_class=HTMLResponse)
 async def recordings(request: Request):
+    post_data = json.loads(
+        templates.get_template("hwa_list.json").render())
+    hwa_list = [bucket["key"] for bucket in client.search(**post_data)["aggregations"]["hwa_list"]["buckets"]]
     return templates.TemplateResponse("recordings.html",
-                                      context={"request": request})
+                                      context={"request": request, "hwa_list": hwa_list})
 
 
 

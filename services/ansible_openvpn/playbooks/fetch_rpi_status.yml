@@ -1,14 +1,18 @@
+- name: Fetch RPI list from OpenVPN
+  ansible.builtin.import_playbook: fetch_openvpn_hosts.yml
 - name: Fetch RPI status information
   hosts: rpi
   gather_facts: no
   connection: ssh
+  vars:
+    ansible_remote_tmp: /run/user/1000
   tasks:
-    - name: Fetch hostname
-      ansible.builtin.shell: cat /etc/hosts | grep 127.0.1.1 | awk '{print $2}'
+    - name: Fetch hostname and eth0 mac
+      ansible.builtin.shell: |
+        cat /etc/hosts | grep 127.0.1.1 | awk '{print $2}'
+        /usr/sbin/ifconfig eth0 2>/dev/null|awk '/ether/ {print $2}'
+        /usr/bin/python3 -c "from pijuice import PiJuice;import json;pijuice = PiJuice(1, 0x14);print(json.dumps({'status': pijuice.status.GetStatus(), 'battery': dict(pijuice.status.GetBatteryVoltage())}, indent=2))"
       register: rpi_host
-    - name: fetch RPI eth0 mac address
-      ansible.builtin.shell: /usr/sbin/ifconfig eth0 2>/dev/null|awk '/ether/ {print $2}'
-      register: rpi_mac
     - name: Print result
       ansible.builtin.debug:
-        msg: Raspberry Pi {{ rpi_mac.stdout }} is {{rpi_host.stdout}}
+        msg: Raspberry Pi {{rpi_host.stdout}}
