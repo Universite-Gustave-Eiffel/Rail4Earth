@@ -16,7 +16,6 @@ import datetime
 import signal
 from threading import Event
 import threading
-from urllib.error import HTTPError
 from urllib.request import urlopen
 import fcntl
 import socket
@@ -84,6 +83,7 @@ class AgendaUpdateDaemon:
                 except urllib.error.URLError as e:
                     logger.error("Error while fetching agenda", e)
             self.t.wait(1300)
+        print("Exiting agenda downloading daemon..")
 
 
 def get_rpi_status():
