@@ -8,6 +8,14 @@
         single_branch: yes
         version: main
       register: gitclone
+    - name: Install services base python requirements
+      ansible.builtin.pip:
+        requirements: /home/pi/noisesensor/services/requirements.txt
+      when: gitclone.changed
+    - name: Install services ble python requirements
+      ansible.builtin.pip:
+        requirements: /home/pi/noisesensor/services/pixljs_alert/requirements.txt
+      when: gitclone.changed
     - name: Restart noisesensor services
       become: true
       ansible.builtin.systemd:

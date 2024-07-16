@@ -1,5 +1,6 @@
 import asyncio
 import os.path
+import urllib.error
 from threading import Thread
 from bleak.backends.characteristic import BleakGATTCharacteristic
 from bleak import BleakClient, BleakError
@@ -9,17 +10,22 @@ import zmq
 import argparse
 import time
 import io
+import sys
 import json
 import datetime
 import signal
 from threading import Event
-import urllib
+import threading
 from urllib.request import urlopen
 import fcntl
 import socket
 import struct
 import re
 import base64
+from pijuice import PiJuice
+import subprocess
+from gpsdclient import GPSDClient
+import traceback
 
 UART_SERVICE_UUID = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
 UART_RX_CHAR_UUID = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -42,7 +48,7 @@ def get_hw_address(interface_name):
 
 
 def slice_bytes(data: bytes, n: int):
-    return (data[i:i + n] for i in range(0, len(data), n))
+    return list(data[i:i + n] for i in range(0, len(data), n))
 
 
 def time_to_iso(seconds_since_epoch):
@@ -78,6 +84,48 @@ class AgendaUpdateDaemon:
                     logger.error("Error while fetching agenda", e)
             self.t.wait(1300)
         print("Exiting agenda downloading daemon..")
+
+
+def get_rpi_status():
+    pi_juice = PiJuice(1, 0x14)
+    battery = pi_juice.status.GetStatus()["data"]["battery"]
+    vpn = "disconnected"
+    try:
+        vpn_out = subprocess.check_output(("ifconfig", "tun0"), timeout=1)
+        for line in vpn_out.decode("utf8").splitlines():
+            if "inet " in line:
+                vpn = line.split()[1]
+                break
+    except subprocess.CalledProcessError as e:
+        pass
+    mic = "no mic"
+    try:
+        mic_out = subprocess.check_output(("arecord", "-L"), timeout=1)
+        for line in mic_out.decode("utf8").splitlines():
+            if "plughw" in line:
+                calibration_file = "/home/pi/zeroindicators.json"
+                sensitivity = "NO CALIB"
+                try:
+                    if os.path.exists(calibration_file):
+                        with open(calibration_file, "r") as calib:
+                            json_doc = json.load(calib)
+                            sensitivity = "%.1f dBFS@94dB" % json_doc["sensitivity"]
+                except json.JSONDecodeError as e:
+                    pass
+                mic = "OK %s" % sensitivity
+                break
+    except subprocess.CalledProcessError as e:
+        pass
+    gpdsdout = "n/a n/a"
+    try:
+        with GPSDClient(timeout=3) as client:
+            for result in client.dict_stream(convert_datetime=True, filter=["TPV"]):
+                gpdsdout = "%.7s %.7s" % (result.get("lat", "n/a"), result.get("lon", "n/a"))
+                break
+    except socket.timeout as e:
+        pass
+    rpi_status = "Mic: %.20s\\nVpn: %.20s\\nBat: %.20s\\nGps: %.20s" % (mic, vpn, battery, gpdsdout)
+    return rpi_status.encode("iso-8859-1")
 
 
 class BleTrackingDaemon:
@@ -120,6 +168,10 @@ class BleTrackingDaemon:
             self.known_devices = {}
             self.t.wait(300)
         print("Exiting daemon")
+        for th in threading.enumerate():
+            print(th)
+            traceback.print_stack(sys._current_frames()[th.ident])
+            print()
 
 
 class ScanResult:
@@ -150,6 +202,7 @@ def process_message(socket, config, agenda):
         return ""
     data = socket.recv_json()
     if data:
+        print("Receive event %s" % data)
         today = datetime.date.today().isoformat()
         today_datetime = datetime.datetime.today()
         if today in agenda["days"]:
@@ -167,6 +220,8 @@ def process_message(socket, config, agenda):
                         b" setTime(%f);E.setTimeZone(%d);"
                         b"}"
                         b"onTrainCrossing(false);\n") % (now, now, -time.altzone // 3600)
+            else:
+                print("Ignore event as it does not fit in agenda %s " % repr(agenda))
     return ""
 
 
@@ -181,11 +236,12 @@ def fetch_script_source_and_version():
         if g:
             source_version = int(g.group(1))
         uart_commands.append("require(\"Storage\").write(\"%s\",atob(\"%s\"),%d,%d);" % (
-            ".bootcde", base64.b64encode(code_bytes[:chunk_size]).decode("UTF8"), 0, len(code_bytes)))
+            ".bootcde", base64.b64encode(code_bytes[:chunk_size]).decode("UTF8"), 0,
+            len(code_bytes)))
         for i in range(chunk_size, len(code_bytes), chunk_size):
             uart_commands.append("require(\"Storage\").write(\"%s\",atob(\"%s\"),%d);" % (
                 ".bootcde", base64.b64encode(code_bytes[i:i + chunk_size]).decode("UTF8"), i))
-        code = "\n".join(uart_commands)+"\nload();\n"
+        code = "\n".join(uart_commands) + "\nload();\n"
     return code.encode("iso-8859-1"), source_version
 
 
@@ -222,34 +278,53 @@ async def main(config):
     while not t.is_set():
         stop_event = asyncio.Event()
         scan_result = ScanResult(stop_event, ble_tracking)
-        async with BleakScanner(scan_result.callback) as scanner:
-            await stop_event.wait()
+        try:
+            async with BleakScanner(scan_result.callback) as scanner:
+                await asyncio.wait_for(stop_event.wait(), timeout=2.0)
+        except asyncio.TimeoutError as e:
+            continue
         if SERVICE_MODE in scan_result.advertising_data.service_data:
             mode = scan_result.advertising_data.service_data[SERVICE_MODE].decode("ascii")
         else:
-            mode = 0
+            mode = "normal"
         if SERVICE_ANSWER_SIZE in scan_result.advertising_data.service_data:
-            answer_stack = int.from_bytes(scan_result.advertising_data.service_data[SERVICE_ANSWER_SIZE]
-                                          , byteorder="big")
+            answer_stack = int.from_bytes(
+                scan_result.advertising_data.service_data[SERVICE_ANSWER_SIZE]
+                , byteorder="big")
         else:
             answer_stack = 0
         if SERVICE_VERSION in scan_result.advertising_data.service_data:
             code_version = int.from_bytes(scan_result.advertising_data.service_data[SERVICE_VERSION]
-                                      , byteorder="big")
+                                          , byteorder="big")
         else:
             code_version = 0
         if mode == "install":
+            print("Install mode connecting to Pixl.js")
             try:
-                async with BleakClient(scan_result.device) as client:
+                async with (BleakClient(scan_result.device) as client):
                     await client.start_notify(UART_TX_CHAR_UUID, scan_result.uart_data_received)
                     nus = client.services.get_service(UART_SERVICE_UUID)
                     rx_char = nus.get_characteristic(UART_RX_CHAR_UUID)
-                    now = time.time()
-                    c = (
-                            b"\x03\x10if(Math.abs(getTime()-%f) > 300) { setTime(%f);E.setTimeZone(%d);}lastSeen=Date();rssi=%f;\n") % (
-                            now, now, -time.altzone // 3600, scan_result.advertising_data.rssi)
-                    for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
-                        await client.write_gatt_char(rx_char, buffer, False)
+                    while client.is_connected and not t.is_set():
+                        now = time.time()
+                        rpi_status = get_rpi_status()
+                        c = (b"\x03\x10if(Math.abs(getTime()-%f) > 300) { setTime("
+                             b"%f);E.setTimeZone(%d);};\nrpi_status=\"%s\";lastSeen = Date();print(\"mode=\"+mode);\n"
+                             ) % (now, now, -time.altzone // 3600, rpi_status)
+                        scan_result.received_data = io.BytesIO()
+                        for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
+                            await client.write_gatt_char(rx_char, buffer)
+                            scan_result.received_data_time = time.time()
+                            # wait for end transfer
+                            await asyncio.sleep(0.05)
+                            while time.time() - scan_result.received_data_time < 0.1:
+                                await asyncio.sleep(0.05)
+                            if t.is_set():
+                                break
+                        return_messages = scan_result.received_data.getvalue().decode("iso-8859-1")
+                        if "mode=1" not in return_messages or not client.is_connected:
+                            print("Exit install mode %s" % return_messages)
+                            break
             except (BleakError, asyncio.TimeoutError) as e:
                 logger.error("Abort communication with pixl.js", e)
         elif answer_stack > 0:
@@ -264,8 +339,9 @@ async def main(config):
                     for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
                         await client.write_gatt_char(rx_char, buffer, False)
                     # wait for end of data arrival
+                    scan_result.received_data_time = time.time()
                     await asyncio.sleep(0.5)
-                    while time.time() - scan_result.received_data_time < 1.0:
+                    while time.time() - scan_result.received_data_time < 1.0 and not t.is_set():
                         await asyncio.sleep(0.5)
                     try:
                         json_string = scan_result.received_data.getvalue().decode("utf8")
@@ -295,32 +371,39 @@ async def main(config):
                 print("Sending new version of Pixl.js source code to %s" %
                       scan_result.device.address)
             tries = 0
-            while c:
+            while c and not t.is_set():
+                print("Try sending commands %.10s" % c)
                 try:
                     async with BleakClient(scan_result.device) as client:
                         await client.start_notify(UART_TX_CHAR_UUID, scan_result.uart_data_received)
                         nus = client.services.get_service(UART_SERVICE_UUID)
                         rx_char = nus.get_characteristic(UART_RX_CHAR_UUID)
-                        for buffer in slice_bytes(c, rx_char.max_write_without_response_size):
+                        chunks = slice_bytes(c, rx_char.max_write_without_response_size)
+                        for chunk_index, buffer in enumerate(chunks):
+                            print("Sending %d/%d" % (chunk_index+1, len(chunks)))
                             await client.write_gatt_char(rx_char, buffer, False)
+                            scan_result.received_data_time = time.time()
                             # wait for end transfer
                             await asyncio.sleep(0.05)
                             while time.time() - scan_result.received_data_time < 0.1:
                                 await asyncio.sleep(0.05)
+                            if t.is_set():
+                                break
                         c = ""
                         try:
                             output = scan_result.received_data.getvalue().decode("iso-8859-1")
                             scan_result.received_data = io.BytesIO()
-                            print(output)
+                            print(output[:-60])
                         except UnicodeDecodeError as e:
                             pass
                         if doing_upgrade:
                             await asyncio.sleep(10.0)
                             doing_upgrade = False
+                            print("Upgrade done !")
                 except (BleakError, asyncio.TimeoutError) as e:
                     tries += 1
                     logger.error("Send data error", e)
-                    if tries > config.max_try:
+                    if tries > config.max_try or doing_upgrade:
                         break
                     else:
                         await asyncio.sleep(0.5)
