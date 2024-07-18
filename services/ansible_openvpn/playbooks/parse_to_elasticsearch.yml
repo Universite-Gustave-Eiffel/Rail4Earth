@@ -17,6 +17,8 @@
       state: directory
     delegate_to: localhost
   - name: Launch python script from playbook
+    environment:
+      PYTHONUNBUFFERED: 1
     ansible.builtin.script:
       cmd: scripts_elasticsearch/feed_rpi_data.py --host https://es01:9200 --json_input_folder '{{ source }}'  --api_key '{{ api_key }}' --api_key_id '{{ api_key_id }}' --json_archive_folder '{{ destination }}' -v
     args:
