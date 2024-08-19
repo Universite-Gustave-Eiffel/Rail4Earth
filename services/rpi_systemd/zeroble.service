@@ -1,6 +1,5 @@
 [Unit]
-Description=Alert Pixl.js box through ble that a train is currently crossing
-After=time-sync.target
+Description=Connection with Pixl.js device
 
 [Service]
 Type=simple

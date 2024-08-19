@@ -1,5 +1,5 @@
 // force timezone to UTC+0200
-const CODE_VERSION=3;
+const CODE_VERSION=5;
 E.setTimeZone(2);
 const BUZZING_TIME = 60000; // buzzer time ms
 const RESET_NO_ANSWER = 60000;
@@ -21,6 +21,7 @@ var PIN_BUZZER = A0; // Yellow cable pin Buzzer is connected to
 Pixl.setLCDPower(false);
 var mode = 0; // 0 wait 1 install 2 answering question
 var rssi = -100;
+var rpi_status = "";
 let lastSeen = Date(0);
 const MODE_SWITCH_MILLI = 2000;
 const TIMEOUT_RPI = 15000;
@@ -52,6 +53,16 @@ Graphics.prototype.setFontPixeloidSans = function(scale) {
   );
 };
 g.setFontPixeloidSans(1);
+
+NRF.on('connect', function(addr) {
+  // Update this property when connected in bluetooth
+  NRF.setRSSIHandler(function(fetched_rssi) {
+    rssi = fetched_rssi;
+  });
+});
+
+NRF.on('disconnect', function(reason) { NRF.setRSSIHandler(); });
+
 
 function disableButtons() {
   clearWatch();
@@ -112,6 +123,13 @@ function switchStateInstall(newMode) {
       repeat: false,
       debounce: 10
     });
+    if (timeout_reset > 0) {
+      try {
+        clearTimeout(timeout_reset);
+      } catch (e) {
+        //ignore
+      }
+    }
   }
   installScreen();
   if (mode) {
@@ -185,16 +203,18 @@ function installScreen() {
   if (mode == 1) {
     g.clear();
     g.setFontAlign(0.5, -1);
-    let text = "Installation mode\nPixl.js " + NRF.getAddress().substr(12, 5).replace(":", "");
-    g.drawString(text, g.getWidth() / 2, 0);
+    let text = "Installation mode\nPixl.js " + NRF.getAddress().substr(12, 5).replace(":", "")+"\n";
     let diff = Date().valueOf() - lastSeen.valueOf();
     if (diff > TIMEOUT_RPI) {
-      text = "No Rpi Connection";
+      text += "No Rpi Connection";
+      rpi_status = "";
     } else {
-      text = "Vu il y a " + parseInt(diff / 1000) + " secondes\nRSSI: " + rssi + " dB (" + rssiPowerHint() + ")";
+      text += parseInt(diff / 1000) + " s à " + rssi + " dB (" + rssiPowerHint() + ")";
     }
-    g.setFontAlign(0.5, 0.5);
-    g.drawString(text, g.getWidth() / 2 , g.getHeight() / 2);
+    let t = g.stringMetrics(text);
+    g.drawString(text, g.getWidth() / 2, 0);
+    g.setFontAlign(-1, -1);
+    g.drawString(rpi_status, 0, t.height + 1);
     g.flip();
     setTimeout(installScreen, 500);
   } else {
@@ -212,7 +232,7 @@ function onPressButtonInstallMode() {
   }
   let state = digitalRead(BTN1);
   if (state) {
-    timeout_switch = setTimeout(switchStateInstall, MODE_SWITCH_MILLI, !mode);
+    timeout_switch = setTimeout(switchStateInstall, MODE_SWITCH_MILLI, 1);
   } else {
     if(mode==0) {
       screenIdle();
