@@ -22,7 +22,7 @@
     destination: '/home/semaphore/data/to_process/'
     ansible_rsync_path: '/usr/bin/timeout 600 /usr/bin/rsync'
     year_week: "{{ hostvars['localhost']['year_week'] }}"
-    disabled_sync: ["b827eb11d0a3","b827eb423d54","b827eb63c0d3", "b827ebc3d1e5"]
+    disabled_sync: []
   tasks:
 #  - name: get current RX
 #    shell: /usr/sbin/ifconfig tun0 | grep "RX packets" | awk '{print $5}'
