@@ -1,5 +1,6 @@
 [Unit]
 Description=Connection with Pixl.js device
+After=bluetooth.target
 
 [Service]
 Type=simple
