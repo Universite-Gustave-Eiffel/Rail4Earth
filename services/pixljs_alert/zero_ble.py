@@ -327,6 +327,9 @@ async def main(config):
                             break
             except (BleakError, asyncio.TimeoutError) as e:
                 logger.error("Abort communication with pixl.js", e)
+                t.set()
+                # will restart service
+                break
         elif answer_stack > 0:
             # fetch answer json
             try:
@@ -400,6 +403,9 @@ async def main(config):
                             await asyncio.sleep(10.0)
                             doing_upgrade = False
                             print("Upgrade done !")
+                            t.set()
+                            # will restart service
+                            break
                 except (BleakError, asyncio.TimeoutError) as e:
                     tries += 1
                     logger.error("Send data error", e)
