@@ -5,7 +5,7 @@ Requires=zerorecord.service
 [Service]
 Type=simple
 ExecStart=/usr/bin/python3.9 -u /home/pi/noisesensor/services/zero_filestorage.py -o /home/pi/noisesensor/out/  --overflow_folder /home/pi/noisesensor/outsd/ --overflow_size 128 -i tcp://127.0.0.1:10005/indicators --compress -r 30 -t %%Y_%%m_%%d.%%Hh%%M --insert_hwa eth0
-ExecStopPost=/usr/bin/cp /home/pi/noisesensor/out/*.gz /home/pi/noisesensor/outsd/
+ExecStopPost=/usr/bin/rsync -ai --exclude='*.tmp' --remove-source-files /home/pi/noisesensor/out/ /home/pi/noisesensor/outsd/
 WorkingDirectory=/home/pi/noisesensor/
 Restart=always
 RestartSec=5s
