@@ -226,7 +226,7 @@ def main():
                                     break
                                 document[result["class"]] = result
                             # Read stuff from telit
-                            if "TPV" in document.keys() and "lat" in document["TPV"].keys():
+                            if "TPV" in document.keys() and {"lat", "lon", "alt"}.issubset(document["TPV"].keys()):
                                 # create special entry specifically for elastic search
                                 document["location"] = {"lat": document["TPV"]["lat"],
                                                         "lon": document["TPV"]["lon"],

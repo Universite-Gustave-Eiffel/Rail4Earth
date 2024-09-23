@@ -8,6 +8,16 @@ import json
 import argparse
 import datetime
 import os
+import time
+
+def epoch_to_elasticsearch_date(epoch):
+    """
+    strict_date_optional_time in elastic search format is
+    yyyy-MM-dd'T'HH:mm:ss.SSSZ
+    @rtype: string
+    """
+    return datetime.datetime.fromtimestamp(epoch, tz=datetime.timezone.utc).strftime(
+        "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
 def open_file_for_write(filename):
     return gzip.open(filename, 'at')
@@ -41,7 +51,12 @@ def main():
                         type=str)
     args = parser.parse_args()
     time_part = datetime.datetime.now().strftime(args.time_format)
-    document = {"date": time_part,"TPV": {"lat": args.latitude,"lon": args.longitude,"alt": args.altitude},"hwa": args.hwa}
+    document = {"date": epoch_to_elasticsearch_date(
+                                time.time()),"TPV": {"lat": args.latitude,"lon": args.longitude,"alt": args.altitude},"hwa": args.hwa}
+    # create special entry specifically for elastic search
+    document["location"] = {"lat": document["TPV"]["lat"],
+                            "lon": document["TPV"]["lon"],
+                            "z": document["TPV"]["alt"]}
     document_path = os.path.join(args.output, "location_"+time_part+".json.gz")
     exists = os.path.exists(document_path)
     with open_file_for_write(document_path) as fp:
