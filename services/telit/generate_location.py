@@ -42,6 +42,10 @@ def main():
     args = parser.parse_args()
     time_part = datetime.datetime.now().strftime(args.time_format)
     document = {"date": time_part,"TPV": {"lat": args.latitude,"lon": args.longitude,"alt": args.altitude},"hwa": args.hwa}
+    # create special entry specifically for elastic search
+    document["location"] = {"lat": document["TPV"]["lat"],
+                            "lon": document["TPV"]["lon"],
+                            "z": document["TPV"]["alt"]}
     document_path = os.path.join(args.output, "location_"+time_part+".json.gz")
     exists = os.path.exists(document_path)
     with open_file_for_write(document_path) as fp:
