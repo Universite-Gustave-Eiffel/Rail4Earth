@@ -16,7 +16,7 @@ def epoch_to_elasticsearch_date(epoch):
     yyyy-MM-dd'T'HH:mm:ss.SSSZ
     @rtype: string
     """
-    return datetime.datetime.fromtimestamp(epoch, tz=datetime.UTC).strftime(
+    return datetime.datetime.fromtimestamp(epoch, tz=datetime.timezone.utc).strftime(
         "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
 def open_file_for_write(filename):
