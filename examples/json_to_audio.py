@@ -40,8 +40,9 @@ def encoded_audio_to_sound_file(config, encoded_audio, output_file_path):
 def get_sf(config):
     with gzip.open(config.document_gz, 'rt') as fp:
         document = json.load(fp)
-        encoded_audio_to_sound_file(config, document["encrypted_audio"],
-                                    config.audio_file)
+        if "encrypted_audio" in document and len(document["encrypted_audio"]) > 0:
+            encoded_audio_to_sound_file(config, document["encrypted_audio"],
+                                        config.audio_file)
 
 
 def sanitize_file_name(s):
@@ -84,7 +85,7 @@ def main():
     args = parser.parse_args()
     if os.path.isdir(args.document_gz):
         documents = [filepath for filepath in os.listdir(args.document_gz) if
-                     filepath.endswith(".json.gz")]
+                     filepath.endswith(".json.gz") and filepath.startswith("yamnet_")]
         for document in documents:
             args_cp = copy.copy(args)
             args_cp.document_gz = os.path.join(args.document_gz, document)
