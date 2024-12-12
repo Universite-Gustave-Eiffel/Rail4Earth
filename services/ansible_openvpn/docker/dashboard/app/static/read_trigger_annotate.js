@@ -109,13 +109,13 @@ ws.once('interaction', () => {
 })
 
 // Create Web Audio context
-const audioContext = null
+var audioContext = null
 
 var gainNode = null
 
 // Connect the audio to the equalizer
 ws.media.addEventListener(
-  'canplay',
+  'loadeddata',
   () => {
     if (audioContext == null) {
       audioContext = new AudioContext()
@@ -124,7 +124,8 @@ ws.media.addEventListener(
     const mediaNode = audioContext.createMediaElementSource(ws.media)
 
     gainNode = audioContext.createGain();
-    gainNode.gain.value = 100 * ws.media.volume;
+    console.log("Volume: " + ws.media.volume)
+    gainNode.gain.value = 200 * ws.media.volume;
     mediaNode.connect(gainNode);
     // Connect the filters to the audio output
     gainNode.connect(audioContext.destination)
