@@ -1,0 +1,22 @@
+
+.a-button {
+    background-color: #008CBA; 
+    border: none;
+    color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+}
+.a-button:hover {
+    cursor: pointer;
+}
+.a-button:disabled {
+    background-color: #e7e7e7 !important;
+    color: black !important;
+} /* Gray */
+.a-button-default {background-color: #008CBA;} /* Blue */
+.a-button-warning {background-color: #ffa500;} /* Orange */
+.a-button-success {background-color: #04AA6D;} /* Green */
+.a-button-error {background-color: #f44336;} /* Red */

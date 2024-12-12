@@ -1,0 +1,18 @@
+{
+  "index": "sensor_yamnet_*",
+  "size" : 1,
+  "_source": true,
+  "query": {
+    "function_score": {
+      "query": {
+        "range": {
+          "date": {
+            "gte": "2024-06-01",
+            "lte": "2024-11-31"
+          }
+        }
+      },
+      "random_score": {}
+    }
+  }
+}
