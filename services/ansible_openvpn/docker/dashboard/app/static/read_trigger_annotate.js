@@ -109,7 +109,7 @@ ws.once('interaction', () => {
 })
 
 // Create Web Audio context
-const audioContext = new AudioContext()
+const audioContext = null
 
 var gainNode = null
 
@@ -117,11 +117,14 @@ var gainNode = null
 ws.media.addEventListener(
   'canplay',
   () => {
+    if (audioContext == null) {
+      audioContext = new AudioContext()
+    }
     // Create a MediaElementSourceNode from the audio element
     const mediaNode = audioContext.createMediaElementSource(ws.media)
 
-	gainNode = audioContext.createGain();
-	gainNode.gain.value = 100 * ws.media.volume;
+    gainNode = audioContext.createGain();
+    gainNode.gain.value = 100 * ws.media.volume;
     mediaNode.connect(gainNode);
     // Connect the filters to the audio output
     gainNode.connect(audioContext.destination)
