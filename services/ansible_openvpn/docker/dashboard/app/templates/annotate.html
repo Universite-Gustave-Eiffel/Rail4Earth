@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Annotate</title>
+
+    <script type="text/javascript" src="static/forge.min.js"></script>
+    <script type="text/javascript" src="static/jquery.min.js"></script>
+    <script type="text/javascript" src="static/moment.min.js"></script>
+    <script type="text/javascript" src="static/download.min.js"></script>
+    <script type="text/javascript" src="static/daterangepicker.min.js"></script>
+    <script type="text/javascript" src="static/handsontable.full.js"></script>
+    <link type="text/css" href="static/handsontable.full.css" rel="stylesheet" media="screen">
+    <link rel="stylesheet" type="text/css" href="static/daterangepicker.css"/>
+    <link rel="stylesheet" type="text/css" href="static/forms.css"/>
+    <link rel="stylesheet" type="text/css" href="static/status.css"/>
+    <link rel="stylesheet" type="text/css" href="static/annotate.css"/>
+    <!-- Add icon library -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"">
+</head>
+<body>
+<div class="info top_menu">
+    <ul class="ul_top_menu">
+        <li class="li_top_menu"><a href="/" target="_self">Map</a></li>
+        <li class="li_top_menu"><a href="/recordings" target="_self" style="outline: none;">Audio records</a></li>
+        <li class="li_top_menu"><a href="/devices" target="_self" style="outline: none;">Connected devices</a></li>
+        <li class="li_top_menu"><a href="https://nsraw.noise-planet.org" target="_blank">Backup data</a></li>
+    </ul>
+</div>
+<div class="form-style-7">
+    <h1>Annotate</h1>
+    <div id="error_panel" class="msg_error" style="visibility: hidden;">
+        Invalid decryption key or password
+    </div>
+    <ul>
+        <li>
+            <label for="privkey">Private key and password</label>
+            <input type="file" name="privkey" accept=".priv,.pem">
+            <input type="password" name="pwd" placeholder="Key File password"/>
+            <span>Encryption private key and password, not transferred</span>
+        </li>
+        <li>
+            <button class="a-button a-button-default" id="next_button">
+                <i class="fa fa-refresh fa-spin" style="display: none;"> </i> Next 
+            </button>
+        </li>
+        <li>
+            <div id="waveform"></div>
+        </li>
+        <li id="train_buttons">
+            
+            <button class="a-button a-button-error" id="not_train_button" disabled>
+                <i class="fa fa-xmark"> </i> Not a train
+            </button>
+            <button class="a-button a-button-warning" id="not_sure_button" disabled>
+                <i class="fa fa-question"></i> Not sure
+            </button>
+            <button class="a-button a-button-success" id="train_button" disabled>
+                <i class="fa fa-check"></i> Train !
+            </button>
+        </li>
+    </ul>
+</div>
+<script type="module" src="static/read_trigger_annotate.js" data-type="module" defer></script>
+</body>
+</html>

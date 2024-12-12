@@ -63,6 +63,35 @@ client = Elasticsearch(
 )
 
 
+@app.get("/api/random-sample/")
+async def random_sample(request: Request):
+    post_data = json.loads(
+        templates.get_template("trigger_random.json").render())
+    response = client.search(**post_data)
+    result = response["hits"]["hits"][0]
+    result_index = result["_index"]   
+    result_id = result["_id"]   
+    result_source = result["_source"]
+    result_source["trigger_index"] = result_index
+    result_source["trigger_id"] = result_id
+    return result_source
+
+
+@app.post("/api/update-sample/")
+async def update_sample(request: Request):
+    post_data = await request.json()
+    print(post_data)
+    res = client.update(
+        index=post_data["trigger_index"],
+        id=post_data["trigger_id"],
+        doc={
+            "annotation": post_data["annotation"]
+        }
+    )
+    print(res)
+    return "success"
+
+
 @app.get("/api/list-samples/{start_epoch_millis}/{end_epoch_millis}/")
 async def get_list_samples(request: Request, start_epoch_millis: int,
                            end_epoch_millis: int, hwa: str = ""):
@@ -143,6 +172,13 @@ async def recordings(request: Request):
     hwa_list = [bucket["key"] for bucket in client.search(**post_data)["aggregations"]["hwa_list"]["buckets"]]
     return templates.TemplateResponse("recordings.html",
                                       context={"request": request, "hwa_list": hwa_list})
+
+@app.get('/annotate', response_class=HTMLResponse)
+async def annotate(request: Request):
+    return templates.TemplateResponse("annotate.html",
+                                      context={"request": request})
+
+
 
 
 
