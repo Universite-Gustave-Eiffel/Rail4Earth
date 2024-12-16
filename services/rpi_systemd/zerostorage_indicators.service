@@ -10,6 +10,7 @@ WorkingDirectory=/home/pi/noisesensor/
 Restart=always
 RestartSec=5s
 User=pi
+CPUAffinity=1,2,3
 
 [Install]
 WantedBy=multi-user.target
