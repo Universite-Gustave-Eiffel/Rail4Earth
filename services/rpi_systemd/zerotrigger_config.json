@@ -1,5 +1,6 @@
 {
   "trigger_count": 400,
+  "zmq_audio_buffer_size": 1920000,
   "ban_tags": ["Speech"],
   "ban_thresholds": [],
   "configuration_file": "",
@@ -13,7 +14,7 @@
   "resample_method": "kaiser_fast",
   "sample_format": "FLOAT_LE",
   "ssh_file": "~/.ssh/id_rsa.pub",
-  "input_address": "tcp://127.0.0.1:10001",
+  "input_address": "ipc:///tmp/audio",
   "output_address_recording": "tcp://127.0.0.1:10002",
   "output_address_recognition": "tcp://127.0.0.1:10003",
   "yamnet_class_map": "third_parties/yamnet/yamnet/yamnet_class_threshold_map.csv",

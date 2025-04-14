@@ -10,6 +10,7 @@ Restart=always
 RestartSec=5s
 TimeoutStopSec=10s
 User=pi
+CPUAffinity=1 2 3
 
 [Install]
 WantedBy=multi-user.target
