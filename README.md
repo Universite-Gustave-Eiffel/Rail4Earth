@@ -1,5 +1,7 @@
 # OnoSensor
 
+OnoSensor, a system developed by UMRAE, is an environmental acoustic sensor that costs less than €500 and consists solely of readily available off-the-shelf hardware and a fully featured, 100% open-source software solution. As part of the “Rail4Earth” research project, 50 of these sensors were deployed across France and collected no less than 1 TB of data (acoustic and audio indicators).
+
 This platform aim to define an open source hardware and software stack for the deployment of a large set of advanced noise sensors.
 
 Installed on a Raspberry Pi (3+, 4, 5) device.
