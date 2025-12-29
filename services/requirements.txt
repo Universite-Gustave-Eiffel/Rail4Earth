@@ -1,7 +1,7 @@
 pyzmq==25.1.2
 tflite-runtime-nightly>=2.14.0.dev20230627
 soundfile==0.12.1
-numba==0.59.0
+numba==0.60.0
 resampy==0.4.3
 pycryptodome==3.20.0
 scipy==1.12.0
