@@ -32,7 +32,8 @@ from __future__ import annotations
 import logging
 
 import elasticsearch
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -40,9 +41,15 @@ import json
 import os
 from elasticsearch import Elasticsearch
 import base64
+from .api_v1 import api_router, require_api_key
 from .openvpn_management import OpenVPNManagement
 
 app = FastAPI()
+
+app.add_middleware(GZipMiddleware, minimum_size=1024)
+app.include_router(
+    api_router, prefix="/api/v1", dependencies=[Depends(require_api_key)]
+)
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 

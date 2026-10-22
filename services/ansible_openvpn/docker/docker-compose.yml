@@ -173,6 +173,7 @@ services:
     environment:
       - WATCHFILES_FORCE_POLLING= true
       - OPENVPN_MANAGEMENT_PASSWORD= ${OPENVPN_MANAGEMENT_PASSWORD}
+      - R4E_API_KEY=${R4E_API_KEY}
     volumes:
       - certs:/home/dashboard/certs
       - ./dashboard/app:/home/dashboard/app
