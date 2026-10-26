@@ -123,6 +123,9 @@ MEM_LIMIT=28073741824
 KIBANA_URL=https://kibana.mydomain.org
 
 OPENVPN_MANAGEMENT_PASSWORD=YOUR_OPENVPN_MANAGEMENT_CONSOLE_PASSWORD
+
+# Shared key for the /api/v1 endpoints (sent as X-API-Key)
+R4E_API_KEY=YOUR_API_KEY
 ```
 
 SEMAPHORE_ACCESS_KEY_ENCRYPTION value is generated with (you can generate other password with this tool too)
