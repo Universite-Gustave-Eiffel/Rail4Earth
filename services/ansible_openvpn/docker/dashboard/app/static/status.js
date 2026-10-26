@@ -82,7 +82,7 @@ L.control.scale().addTo(lmap);
 
 var sensors = L.layerGroup();
 
-var osm = L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png', {
+var osm = L.tileLayer('https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png?key=cb1_2gey_1_b3058d86b69f389b5b039989', {
   maxZoom: 18, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attribution">CARTO</a>'});
 
 osm.addTo(lmap);
