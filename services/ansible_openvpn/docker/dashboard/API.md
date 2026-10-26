@@ -26,8 +26,8 @@ Returns the sensors available in the optional `SENSOR_NAMES_FILE` CSV
 
 ```http
 GET /api/v1/sensors/{name}/indicators
-    ?from=2026-10-22T11:00:00
-    &to=2026-10-22T11:01:00
+    ?from=1792659600000
+    &to=1792663200000
     &resolution=1min
     &metrics=LZeq
     &bands=false
@@ -35,7 +35,7 @@ GET /api/v1/sensors/{name}/indicators
 
 | Parameter | Values | Default |
 |---|---|---|
-| `from`, `to` | ISO 8601; Europe/Paris if no offset | required |
+| `from`, `to` | epoch milliseconds (UTC) | required |
 | `resolution` | `125ms`, `1s`, `10s`, `1min`, `15min` | `1min` |
 | `metrics` | `LAeq`, `LZeq`, `LCeq` (comma-separated) | all available |
 | `bands` | `true` / `false` | `false` |
@@ -48,7 +48,7 @@ that would exceed 5 million values is rejected.
 ```bash
 curl --compressed -H "X-API-Key: $R4E_API_KEY" \
   "https://<dashboard-host>/api/v1/sensors/b827eb9af680/indicators?\
-from=2026-10-22T11:00:00&to=2026-10-22T11:01:00&resolution=1min&metrics=LZeq"
+from=1792659600000&to=1792663200000&resolution=1min&metrics=LZeq"
 ```
 
 Response:
@@ -56,26 +56,27 @@ Response:
 ```json
 {
   "sensor": {"name": "b827eb9af680", "hwa": "b827eb9af680"},
-  "from": "2026-10-22T11:00:00.000+02:00",
-  "to": "2026-10-22T11:01:00.000+02:00",
+  "from": 1792659600000,
+  "to": 1792663200000,
   "resolution_s": 60.0,
   "unit": "dB",
   "count": 1,
-  "time": ["2026-10-22T11:00:00.000+02:00"],
+  "time": [1792661697000],
   "metrics": {"LZeq": [56.8]},
   "bands": null
 }
 ```
 
-Arrays are columnar and have the same length. Aggregated values are energy
-averages (`10*log10(mean(10**(L/10)))`), aligned on the resolution in UTC.
+All times are epoch milliseconds in UTC. Arrays are columnar and have the
+same length. Aggregated values are computed in Elasticsearch as energy
+averages (`10*log10(mean(10**(L/10)))`).
 
 ## Recognition events
 
 ```http
 GET /api/v1/sensors/{name}/events
-    ?from=2026-12-11T00:00:00
-    &to=2026-12-12T00:00:00
+    ?from=1733875200000
+    &to=1733961600000
     &tags=Train
     &min_score=0.1
     &limit=100
@@ -96,7 +97,7 @@ Response:
   "count": 1,
   "events": [{
     "id": "...",
-    "time": "2024-12-11T12:08:37.511+01:00",
+    "time": 1733915317511,
     "leq": 77.06,
     "scores": {"Train": 0.38},
     "orders": {"Train": 3}
