@@ -93,6 +93,9 @@ A tag can contain a comma, for example `Railroad car, train wagon`. Pass it
 alone, or combine it with `|`, for example
 `tags=Train%7CRailroad%20car%2C%20train%20wagon`.
 
+Tags are read from each event's `scores`; new YAMNet labels work without an
+API change, as long as the sensor stores them.
+
 Response:
 
 ```json
