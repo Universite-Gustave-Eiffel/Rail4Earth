@@ -198,11 +198,12 @@ Point = Tuple[int, Dict[str, Optional[float]]]
 _SCRIPT_INIT = "state.sums = new HashMap(); state.counts = new HashMap();"
 _SCRIPT_MAP = """
 long base = doc['date_start'].value.toInstant().toEpochMilli();
-if (doc.containsKey(params.field)) {
-  int index = 0;
-  for (def level : doc[params.field]) {
+def levels = params._source[params.field];
+if (levels != null) {
+  for (int index = 0; index < levels.size(); index++) {
+    def level = levels[index];
+    if (level == null) continue;
     long timestamp = base + (long)index * params.window_ms;
-    index++;
     if (timestamp < params.start || timestamp > params.end) continue;
     long key = timestamp / params.resolution_ms;
     double power = Math.pow(10.0, level / 10.0);
