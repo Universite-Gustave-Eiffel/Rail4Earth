@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Dict, Iterable, Iterator, List, Optional, Tuple
 
-from elasticsearch.helpers import scan
 from fastapi import APIRouter, HTTPException, Query, Security
 from fastapi.security import APIKeyHeader
 
@@ -575,18 +574,27 @@ def get_events(
         "bool": {
             "filter": [
                 {"term": {"hwa.keyword": hwa}},
-                {"range": {"date": {"gte": from_, "lte": to}}},
+                {
+                    "range": {
+                        "date": {
+                            "gte": from_,
+                            "lte": to,
+                            "format": "epoch_millis",
+                        }
+                    }
+                },
             ]
         }
     }
 
     events: List[Dict] = []
-    for hit in scan(
-        get_client(),
+    response = get_client().search(
         index=settings.events_index,
         query=query,
-        size=1000,
-    ):
+        size=5000,
+        sort=[{"date": "asc"}],
+    )
+    for hit in response["hits"]["hits"]:
         source = hit["_source"]
         timestamp = _event_time(source)
         if timestamp is None:
