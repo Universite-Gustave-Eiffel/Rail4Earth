@@ -552,7 +552,9 @@ def get_events(
     name: str,
     from_: int = Query(..., alias="from", ge=0),
     to: int = Query(..., ge=0),
-    tags: Optional[str] = Query(None),
+    tags: Optional[str] = Query(
+        None, description="Yamnet tags; use | between tags"
+    ),
     min_score: float = Query(0.0, ge=0.0, le=1.0),
     limit: int = Query(1000, ge=1, le=5000),
 ):
@@ -564,7 +566,9 @@ def get_events(
             status_code=400, detail="date range too large (maximum one week)"
         )
 
-    wanted = [item.strip() for item in tags.split(",") if item.strip()] if tags else []
+    tag_text = tags.strip() if tags else ""
+    separator = "|" if "|" in tag_text else ","
+    wanted = [item.strip() for item in tag_text.split(separator) if item.strip()]
     hwa, display_name = resolve_sensor(name)
 
     query = {
@@ -595,12 +599,16 @@ def get_events(
         if not isinstance(orders, dict):
             orders = {}
 
-        if wanted:
-            relevant = [
-                scores[tag]
-                for tag in wanted
-                if isinstance(scores.get(tag), (int, float))
-            ]
+        if tag_text:
+            # A tag can contain a comma; use "|" to combine several tags.
+            if tag_text in scores:
+                relevant = [scores[tag_text]]
+            else:
+                relevant = [
+                    scores[tag]
+                    for tag in wanted
+                    if isinstance(scores.get(tag), (int, float))
+                ]
             if not relevant:
                 continue
         else:
