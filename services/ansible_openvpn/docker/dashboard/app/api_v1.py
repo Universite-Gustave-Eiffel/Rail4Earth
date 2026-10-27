@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Dict, Iterable, Iterator, List, Optional, Tuple
 
-from elasticsearch.helpers import scan
 from fastapi import APIRouter, HTTPException, Query, Security
 from fastapi.security import APIKeyHeader
 
@@ -199,11 +198,12 @@ Point = Tuple[int, Dict[str, Optional[float]]]
 _SCRIPT_INIT = "state.sums = new HashMap(); state.counts = new HashMap();"
 _SCRIPT_MAP = """
 long base = doc['date_start'].value.toInstant().toEpochMilli();
-if (doc.containsKey(params.field)) {
-  int index = 0;
-  for (def level : doc[params.field]) {
+def levels = params._source[params.field];
+if (levels != null) {
+  for (int index = 0; index < levels.size(); index++) {
+    def level = levels[index];
+    if (level == null) continue;
     long timestamp = base + (long)index * params.window_ms;
-    index++;
     if (timestamp < params.start || timestamp > params.end) continue;
     long key = timestamp / params.resolution_ms;
     double power = Math.pow(10.0, level / 10.0);
@@ -552,7 +552,9 @@ def get_events(
     name: str,
     from_: int = Query(..., alias="from", ge=0),
     to: int = Query(..., ge=0),
-    tags: Optional[str] = Query(None),
+    tags: Optional[str] = Query(
+        None, description="Yamnet tags; use | between tags"
+    ),
     min_score: float = Query(0.0, ge=0.0, le=1.0),
     limit: int = Query(1000, ge=1, le=5000),
 ):
@@ -564,25 +566,36 @@ def get_events(
             status_code=400, detail="date range too large (maximum one week)"
         )
 
-    wanted = [item.strip() for item in tags.split(",") if item.strip()] if tags else []
+    tag_text = tags.strip() if tags else ""
+    separator = "|" if "|" in tag_text else ","
+    wanted = [item.strip() for item in tag_text.split(separator) if item.strip()]
     hwa, display_name = resolve_sensor(name)
 
     query = {
         "bool": {
             "filter": [
                 {"term": {"hwa.keyword": hwa}},
-                {"range": {"date": {"gte": from_, "lte": to}}},
+                {
+                    "range": {
+                        "date": {
+                            "gte": from_,
+                            "lte": to,
+                            "format": "epoch_millis",
+                        }
+                    }
+                },
             ]
         }
     }
 
     events: List[Dict] = []
-    for hit in scan(
-        get_client(),
+    response = get_client().search(
         index=settings.events_index,
         query=query,
-        size=1000,
-    ):
+        size=5000,
+        sort=[{"date": "asc"}],
+    )
+    for hit in response["hits"]["hits"]:
         source = hit["_source"]
         timestamp = _event_time(source)
         if timestamp is None:
@@ -595,12 +608,16 @@ def get_events(
         if not isinstance(orders, dict):
             orders = {}
 
-        if wanted:
-            relevant = [
-                scores[tag]
-                for tag in wanted
-                if isinstance(scores.get(tag), (int, float))
-            ]
+        if tag_text:
+            # A tag can contain a comma; use "|" to combine several tags.
+            if tag_text in scores:
+                relevant = [scores[tag_text]]
+            else:
+                relevant = [
+                    scores[tag]
+                    for tag in wanted
+                    if isinstance(scores.get(tag), (int, float))
+                ]
             if not relevant:
                 continue
         else:

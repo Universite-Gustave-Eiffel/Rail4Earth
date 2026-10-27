@@ -77,7 +77,7 @@ averages (`10*log10(mean(10**(L/10)))`).
 GET /api/v1/sensors/{name}/events
     ?from=1733875200000
     &to=1733961600000
-    &tags=Train
+    &tags=Train%7CRail%20transport
     &min_score=0.1
     &limit=100
 ```
@@ -85,9 +85,16 @@ GET /api/v1/sensors/{name}/events
 | Parameter | Meaning | Default |
 |---|---|---|
 | `from`, `to` | maximum one week | required |
-| `tags` | comma-separated Yamnet tags | all |
+| `tags` | Yamnet tags; separate multiple tags with `|` | all |
 | `min_score` | minimum relevant score | `0` |
 | `limit` | maximum returned events (1-5000) | `1000` |
+
+A tag can contain a comma, for example `Railroad car, train wagon`. Pass it
+alone, or combine it with `|`, for example
+`tags=Train%7CRailroad%20car%2C%20train%20wagon`.
+
+Tags are read from each event's `scores`; new YAMNet labels work without an
+API change, as long as the sensor stores them.
 
 Response:
 
